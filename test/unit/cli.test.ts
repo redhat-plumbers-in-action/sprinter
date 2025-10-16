@@ -33,7 +33,7 @@ describe('CLI functions', () => {
 
     const program = cli();
 
-    expect(program.name()).toBe('sprinter');
+    expect(program.name()).toBe('jira-sprinter');
     expect(program.description()).toBe(
       '🏃 Small CLI tool to manage sprints in JIRA Board'
     );
@@ -47,7 +47,7 @@ describe('CLI functions', () => {
     `);
 
     expect(program.helpInformation()).toMatchInlineSnapshot(`
-      "Usage: sprinter [options]
+      "Usage: jira-sprinter [options]
 
       🏃 Small CLI tool to manage sprints in JIRA Board
 

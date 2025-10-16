@@ -21,7 +21,7 @@ export function cli(): Command {
   const program = new Command();
 
   program
-    .name('sprinter')
+    .name('jira-sprinter')
     .description('🏃 Small CLI tool to manage sprints in JIRA Board')
     .version('1.0.0');
 

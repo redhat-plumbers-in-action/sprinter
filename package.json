@@ -1,6 +1,6 @@
 {
-  "name": "sprinter",
-  "version": "1.0.0",
+  "name": "jira-sprinter",
+  "version": "1.0.1",
   "description": "Small CLI tool to manage sprints in JIRA Board",
   "main": "src/main.ts",
   "type": "commonjs",

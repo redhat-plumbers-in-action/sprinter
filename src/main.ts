@@ -10,8 +10,8 @@ import runProgram from './cli';
 dotenv.config({
   path: [
     `${path.resolve(process.cwd(), '.env')}`,
-    `${path.resolve(os.homedir(), '.config', 'sprinter', '.env')}`,
-    `${path.resolve(os.homedir(), '.env.sprinter')}`,
+    `${path.resolve(os.homedir(), '.config', 'jira-sprinter', '.env')}`,
+    `${path.resolve(os.homedir(), '.env.jira-sprinter')}`,
     `${path.resolve(os.homedir(), '.env')}`,
   ],
 });

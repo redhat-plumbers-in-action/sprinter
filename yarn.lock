@@ -1827,6 +1827,30 @@ __metadata:
   languageName: node
   linkType: hard
 
+"jira-sprinter@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "jira-sprinter@workspace:."
+  dependencies:
+    "@inquirer/checkbox": "npm:^4.3.0"
+    "@inquirer/select": "npm:4.4.0"
+    "@total-typescript/ts-reset": "npm:0.6.1"
+    "@types/node": "npm:24.7.2"
+    "@vitest/coverage-v8": "npm:3.2.4"
+    chalk: "npm:5.6.2"
+    commander: "npm:14.0.1"
+    dotenv: "npm:17.2.3"
+    esbuild: "npm:0.25.11"
+    jira.js: "npm:5.2.2"
+    prettier: "npm:3.6.2"
+    ts-node: "npm:10.9.2"
+    typescript: "npm:5.9.3"
+    vitest: "npm:3.2.4"
+    zod: "npm:4.1.12"
+  bin:
+    jira-sprinter: ./dist/main.js
+  languageName: unknown
+  linkType: soft
+
 "jira.js@npm:5.2.2":
   version: 5.2.2
   resolution: "jira.js@npm:5.2.2"
@@ -2369,30 +2393,6 @@ __metadata:
   checksum: 10c0/7bda1fc4c197e3c6ff17de1b8b2c20e60af81b63a52cb32ec5a5d67a20a7d42651e2cb34ebe93833c5a2a084377e17455854fee3e21e7925c64a51b6a52b0faf
   languageName: node
   linkType: hard
-
-"sprinter@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "sprinter@workspace:."
-  dependencies:
-    "@inquirer/checkbox": "npm:^4.3.0"
-    "@inquirer/select": "npm:4.4.0"
-    "@total-typescript/ts-reset": "npm:0.6.1"
-    "@types/node": "npm:24.7.2"
-    "@vitest/coverage-v8": "npm:3.2.4"
-    chalk: "npm:5.6.2"
-    commander: "npm:14.0.1"
-    dotenv: "npm:17.2.3"
-    esbuild: "npm:0.25.11"
-    jira.js: "npm:5.2.2"
-    prettier: "npm:3.6.2"
-    ts-node: "npm:10.9.2"
-    typescript: "npm:5.9.3"
-    vitest: "npm:3.2.4"
-    zod: "npm:4.1.12"
-  bin:
-    sprinter: ./dist/main.js
-  languageName: unknown
-  linkType: soft
 
 "ssri@npm:^12.0.0":
   version: 12.0.0

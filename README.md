@@ -25,19 +25,19 @@ Simple CLI tool that helps to manage sprints in JIRA Board.
 
 ## Usage
 
-Make sure to store your JIRA Personal Access Token (PAT) in the `~/.config/sprinter/.env` or `~/.env.sprinter` file:
+Make sure to store your JIRA Personal Access Token (PAT) in the `~/.config/jira-sprinter/.env` or `~/.env.jira-sprinter` file:
 
 ```bash
-# ~/.config/sprinter/.env
+# ~/.config/jira-sprinter/.env
 JIRA_API_TOKEN="exaple-token"
 ```
 
 > [!TIP]
 >
-> You can also set default values for the `assignee`, `board` in the `~/.config/sprinter/.env` or `~/.env.sprinter` file:
+> You can also set default values for the `assignee`, `board` in the `~/.config/jira-sprinter/.env` or `~/.env.jira-sprinter` file:
 >
 > ```bash
-> # ~/.config/sprinter/.env
+> # ~/.config/jira-sprinter/.env
 > ASSIGNEE="your-jira-username"
 > BOARD="your-jira-board-id"
 > ```
@@ -46,11 +46,11 @@ JIRA_API_TOKEN="exaple-token"
 
 ```bash
 # run it using npx
-npx sprinter
+npx jira-sprinter
 
 # or install it globally using npm
-npm install -g sprinter
-sprinter
+npm install -g jira-sprinter
+jira-sprinter
 ```
 
 ## How to use
@@ -60,8 +60,8 @@ sprinter
 > This tool is intended to be used by Red Hat employees on the Red Hat JIRA instance. It may be adapted to work with other JIRA instances in the future.
 
 ```md
-$ sprinter --help
-Usage: sprinter [options]
+$ jira-sprinter --help
+Usage: jira-sprinter [options]
 
 🏃 Small CLI tool to manage sprints in JIRA Board
 
