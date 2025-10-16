@@ -2,8 +2,8 @@
 
 [![npm version][npm-status]][npm] [![Tests][test-status]][test] [![Linters][lint-status]][lint] [![CodeQL][codeql-status]][codeql] [![codecov][codecov-status]][codecov]
 
-[npm]: https://www.npmjs.com/package/sprinter
-[npm-status]: https://img.shields.io/npm/v/sprinter
+[npm]: https://www.npmjs.com/package/jira-sprinter
+[npm-status]: https://img.shields.io/npm/v/jira-sprinter
 
 [test]: https://github.com/redhat-plumbers-in-action/sprinter/actions/workflows/tests.yml
 [test-status]: https://github.com/redhat-plumbers-in-action/sprinter/actions/workflows/tests.yml/badge.svg
