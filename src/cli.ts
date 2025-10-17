@@ -67,10 +67,11 @@ const runProgram = async () => {
       })),
       {
         name: `${chalk.bold('Backlog')}`,
+        disabled: true,
         value: -1,
       },
     ],
-    default: -1,
+    default: sprints.find(sprint => sprint.state === 'future')?.id ?? undefined,
     pageSize: 5,
     loop: false,
   });
