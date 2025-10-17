@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => {
   return {
     getServerInfo: vi.fn(),
     searchForIssuesUsingJqlPost: vi.fn(),
+    getIssuesForSprint: vi.fn(),
     editIssue: vi.fn(),
     getAllSprints: vi.fn(),
   };
@@ -31,6 +32,9 @@ vi.mock('jira.js', () => {
     return {
       board: {
         getAllSprints: mocks.getAllSprints,
+      },
+      sprint: {
+        getIssuesForSprint: mocks.getIssuesForSprint,
       },
     };
   });
@@ -115,6 +119,37 @@ describe('Jira functions', () => {
     expect(await jira.getVersion()).toMatchInlineSnapshot(`"8.0.0"`);
   });
 
+  test('getIssuesInSprint()', async () => {
+    mocks.getIssuesForSprint.mockReturnValue({
+      issues: [
+        {
+          key: 'RHEL-1234',
+          fields: {
+            // ...
+          },
+        },
+      ],
+    });
+
+    await jira.getIssuesInSprint(1, 'assignee');
+    expect(mocks.getIssuesForSprint).toHaveBeenCalledWith({
+      fields: [
+        'id',
+        'issuetype',
+        'status',
+        'summary',
+        'assignee',
+        'priority',
+        'components',
+        jira.fields.storyPoints,
+        jira.fields.severity,
+      ],
+      jql: 'assignee = \"assignee\" AND issueFunction not in linkedIssuesOf("type = Task AND (summary ~ \'DEV Task\' OR summary ~ \'QE Task\')") AND type not in (Task, Epic) AND project = "RHEL"',
+      maxResults: 500,
+      sprintId: 1,
+    });
+  });
+
   test('composeTaskSummaryJQL()', () => {
     expect(jira.composeTaskSummaryJQL([])).toMatchInlineSnapshot(
       `"summary ~ "\\\\[\\\\]: ""`
@@ -127,6 +162,36 @@ describe('Jira functions', () => {
     ).toMatchInlineSnapshot(
       `"summary ~ "\\\\[DEV Task\\\\]: " OR summary ~ "\\\\[QE Task\\\\]: ""`
     );
+  });
+
+  test('setValues()', async () => {
+    await jira.setValues('RHEL-1234', {
+      assignee: 'assignee',
+      sprint: 1,
+    });
+
+    expect(mocks.editIssue).toHaveBeenCalledWith({
+      issueIdOrKey: 'RHEL-1234',
+      fields: {
+        assignee: { name: 'assignee' },
+        [jira.fields.sprint]: 1,
+      },
+    });
+
+    await jira.setValues('RHEL-1234', {
+      assignee: 'assignee',
+      size: 3,
+      sprint: null,
+    });
+
+    expect(mocks.editIssue).toHaveBeenCalledWith({
+      issueIdOrKey: 'RHEL-1234',
+      fields: {
+        assignee: { name: 'assignee' },
+        [jira.fields.storyPoints]: 3,
+        [jira.fields.sprint]: null,
+      },
+    });
   });
 
   test('getIssueURL()', () => {
