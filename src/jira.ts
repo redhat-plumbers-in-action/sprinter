@@ -60,7 +60,7 @@ export class Jira {
 
   async getIssuesInSprint(
     sprintId: number,
-    assignee: string | undefined = undefined,
+    assignee?: string,
     issuesWithoutTasks: boolean = true
   ): Promise<SearchResults['issues']> {
     let jql = assignee ? `assignee = "${assignee}"` : '';
