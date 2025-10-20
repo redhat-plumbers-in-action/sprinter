@@ -159,9 +159,10 @@ export class Jira {
     const assigneeValue = values.assignee
       ? { [this.fields.assignee]: { name: values.assignee } }
       : {};
-    const storyPointsValue = values.size
-      ? { [this.fields.storyPoints]: values.size }
-      : {};
+    const storyPointsValue =
+      values.size !== undefined
+        ? { [this.fields.storyPoints]: values.size }
+        : {};
     const sprintValue =
       values.sprint === undefined
         ? {}
