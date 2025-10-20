@@ -164,9 +164,9 @@ export class Jira {
         ? { [this.fields.storyPoints]: values.size }
         : {};
     const sprintValue =
-      values.sprint === undefined
-        ? {}
-        : { [this.fields.sprint]: values.sprint };
+      values.sprint !== undefined
+        ? { [this.fields.sprint]: values.sprint }
+        : {};
 
     await this.api.issues.editIssue({
       issueIdOrKey: issue,
