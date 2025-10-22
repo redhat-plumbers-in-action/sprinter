@@ -23,7 +23,7 @@ export function cli(): Command {
   program
     .name('jira-sprinter')
     .description('🏃 Small CLI tool to manage sprints in JIRA Board')
-    .version('1.0.3');
+    .version('1.1.0');
 
   program
     .option('-b, --board [board]', 'Jira Board ID', getDefaultValue('BOARD'))
