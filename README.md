@@ -34,7 +34,7 @@ JIRA_API_TOKEN="exaple-token"
 
 > [!TIP]
 >
-> You can also set default values for the `assignee`, `board` in the `~/.config/jira-sprinter/.env` or `~/.env.jira-sprinter` file:
+> You can also set default values for the `assignee`, `board` and more in the `~/.config/jira-sprinter/.env` or `~/.env.jira-sprinter` file:
 >
 > ```bash
 > # ~/.config/jira-sprinter/.env
@@ -69,6 +69,8 @@ Options:
   -V, --version              output the version number
   -b, --board [board]        Jira Board ID
   -a, --assignee [assignee]  Jira Assignee (default: "<user-login>@redhat.com")
+  -y, --yolo                 YOLO mode, dangerously skip all questions, apply
+                             default values (use with caution!) (default: false)
   -n, --nocolor              Disable color output (default: false)
   -x, --dry                  dry run
   -h, --help                 display help for command

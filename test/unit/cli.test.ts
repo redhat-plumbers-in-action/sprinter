@@ -43,6 +43,7 @@ describe('CLI functions', () => {
       {
         "assignee": "username@redhat.com",
         "nocolor": false,
+        "yolo": false,
       }
     `);
 
@@ -55,6 +56,8 @@ describe('CLI functions', () => {
         -V, --version              output the version number
         -b, --board [board]        Jira Board ID
         -a, --assignee [assignee]  Jira Assignee (default: "username@redhat.com")
+        -y, --yolo                 YOLO mode, dangerously skip all questions, apply
+                                   default values (use with caution!) (default: false)
         -n, --nocolor              Disable color output (default: false)
         -x, --dry                  dry run
         -h, --help                 display help for command

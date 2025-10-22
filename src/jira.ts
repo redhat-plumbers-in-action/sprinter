@@ -139,6 +139,7 @@ export class Jira {
       return;
     }
 
+    this.logger.log(`Creating tasks: ${tasks.join(', ')} for issue: ${issue}`);
     await this.api.issues.editIssue({
       issueIdOrKey: issue,
       fields: {

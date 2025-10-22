@@ -21,7 +21,7 @@ export function isDefaultValuesDisabled(): boolean {
 }
 
 export function getDefaultValue(
-  envName: 'ASSIGNEE' | 'BOARD' | 'NOCOLOR' | 'DRY'
+  envName: 'ASSIGNEE' | 'BOARD' | 'NOCOLOR' | 'DRY' | 'YOLO'
 ) {
   if (isDefaultValuesDisabled()) {
     return undefined;
@@ -34,6 +34,10 @@ export function getDefaultValue(
   }
 
   if (envName === 'NOCOLOR' && !value) {
+    return false;
+  }
+
+  if (envName === 'YOLO' && !value) {
     return false;
   }
 
