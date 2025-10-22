@@ -32,6 +32,11 @@ export function cli(): Command {
       'Jira Assignee',
       getDefaultValue('ASSIGNEE')
     )
+    .option(
+      '-y, --yolo',
+      'YOLO mode, dangerously skip all questions, apply default values (use with caution!)',
+      getDefaultValue('YOLO')
+    )
     .option('-n, --nocolor', 'Disable color output', getDefaultValue('NOCOLOR'))
     .option('-x, --dry', 'dry run', getDefaultValue('DRY'));
 
@@ -113,28 +118,37 @@ const runProgram = async () => {
       { name: 'Integration Testing', value: 48270 },
     ];
 
-    const answer = await checkbox({
-      message: `Split ${chalk.bold(issue.key)} into following tasks:\n`,
-      choices: [
-        ...availableTasks.map(task => ({
-          name: colorTaskSchema(task.name),
-          value: task.value,
-          checked: task.checked ?? false,
-        })),
-        new Separator(),
-        { name: 'SKIP', value: -1 },
-        { name: 'EXIT', value: -2 },
-      ],
-      loop: false,
-      pageSize: 10,
-    });
+    let answer: number[] = [];
+    if (!options.yolo) {
+      answer = await checkbox({
+        message: `Split ${chalk.bold(issue.key)} into following tasks:\n`,
+        choices: [
+          ...availableTasks.map(task => ({
+            name: colorTaskSchema(task.name),
+            value: task.value,
+            checked: task.checked ?? false,
+          })),
+          new Separator(),
+          { name: 'SKIP', value: -1 },
+          { name: 'EXIT', value: -2 },
+        ],
+        loop: false,
+        pageSize: 10,
+      });
 
-    if (answer.includes(-1)) {
-      continue;
+      if (answer.includes(-1)) {
+        continue;
+      }
+
+      if (answer.includes(-2)) {
+        process.exit(0);
+      }
     }
 
-    if (answer.includes(-2)) {
-      process.exit(0);
+    if (options.yolo) {
+      answer = availableTasks
+        .filter(task => task.checked ?? false)
+        .map(task => task.value);
     }
 
     // Create tasks
@@ -165,53 +179,66 @@ const runProgram = async () => {
       }
 
       logger.log(`${chalk.italic(task.fields.summary)}`);
-      const storyPointsAnswer: Size = await select({
-        message: 'Story Points',
-        choices: [
-          {
-            name: colorSizeSchema.parse(0),
-            value: 0,
-          },
-          {
-            name: colorSizeSchema.parse(1),
-            value: 1,
-          },
-          {
-            name: colorSizeSchema.parse(2),
-            value: 2,
-          },
-          {
-            name: colorSizeSchema.parse(3),
-            value: 3,
-          },
-          {
-            name: colorSizeSchema.parse(5),
-            value: 5,
-          },
-          {
-            name: colorSizeSchema.parse(8),
-            value: 8,
-          },
-          {
-            name: colorSizeSchema.parse(13),
-            value: 13,
-          },
-        ],
-        default: issue.fields?.[jira.fields.storyPoints] ?? 3,
-        pageSize: 6,
-        loop: false,
-      });
 
-      const addToSprintAnswer = await select({
-        message: 'Add to sprint',
-        choices: [
-          { name: `${chalk.green('Yes')}`, value: true },
-          { name: `${chalk.red('No')}`, value: false },
-        ],
-        default: true,
-        pageSize: 2,
-        loop: false,
-      });
+      let storyPointsAnswer: Size | undefined;
+      let addToSprintAnswer: boolean | undefined;
+      if (!options.yolo) {
+        storyPointsAnswer = await select({
+          message: 'Story Points',
+          choices: [
+            {
+              name: colorSizeSchema.parse(0),
+              value: 0,
+            },
+            {
+              name: colorSizeSchema.parse(1),
+              value: 1,
+            },
+            {
+              name: colorSizeSchema.parse(2),
+              value: 2,
+            },
+            {
+              name: colorSizeSchema.parse(3),
+              value: 3,
+            },
+            {
+              name: colorSizeSchema.parse(5),
+              value: 5,
+            },
+            {
+              name: colorSizeSchema.parse(8),
+              value: 8,
+            },
+            {
+              name: colorSizeSchema.parse(13),
+              value: 13,
+            },
+          ],
+          default: issue.fields?.[jira.fields.storyPoints] ?? 3,
+          pageSize: 6,
+          loop: false,
+        });
+
+        addToSprintAnswer = await select({
+          message: 'Add to sprint',
+          choices: [
+            { name: `${chalk.green('Yes')}`, value: true },
+            { name: `${chalk.red('No')}`, value: false },
+          ],
+          default: true,
+          pageSize: 2,
+          loop: false,
+        });
+      }
+
+      if (options.yolo) {
+        storyPointsAnswer = issue.fields?.[jira.fields.storyPoints];
+        addToSprintAnswer = sprintOrBacklog != -1;
+        logger.log(
+          `Setting story points to ${colorSizeSchema.parse(storyPointsAnswer)} and adding it to the sprint.`
+        );
+      }
 
       // update task
       await jira.setValues(task.key, {
