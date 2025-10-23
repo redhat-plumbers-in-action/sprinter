@@ -93,11 +93,6 @@ const runProgram = async () => {
     process.exit(0);
   }
 
-  // TODO:
-  // Show issue - allow to split it into tasks
-  // Allow to set story points and assignee
-  // add task into sprint
-
   for (const issue of issues) {
     logger.log(
       `\n${issueTypeSchema.parse(issue.fields?.issuetype.name)} ${issue.key} - ${chalk.bold(issueStatusSchema.parse(issue.fields?.status.name))} - ${chalk.italic(issue.fields?.assignee?.displayName ?? '')}`
@@ -171,7 +166,6 @@ const runProgram = async () => {
       }
     }
 
-    // loop through tasks and and set sprint, assignee and story points
     for (const task of tasks) {
       // Skip QE Task
       if (task.fields.summary.includes('QE Task')) {
@@ -240,7 +234,6 @@ const runProgram = async () => {
         );
       }
 
-      // update task
       await jira.setValues(task.key, {
         assignee: issue.fields?.assignee?.emailAddress,
         size: storyPointsAnswer,

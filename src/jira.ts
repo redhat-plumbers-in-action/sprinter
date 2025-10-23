@@ -78,7 +78,6 @@ export class Jira {
         'assignee',
         'priority',
         'components',
-        // sprint
         this.fields.storyPoints,
         this.fields.severity,
       ],
