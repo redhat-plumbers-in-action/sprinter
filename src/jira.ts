@@ -1,5 +1,6 @@
 import { AgileClient, Version2Client } from 'jira.js';
 import { SearchResults, Sprint } from 'jira.js/dist/esm/types/agile/models';
+import { Issue } from 'jira.js/dist/esm/types/version2/models';
 
 import { raise } from './util';
 import { Size } from './schema/jira';
@@ -114,6 +115,30 @@ export class Jira {
   }
 
   async getlinkedTasks(issue: string, expectedTasks: string[]) {
+    if (this.dry) {
+      this.logger.log(`Would get linked tasks for issue: ${issue}`);
+      return [
+        {
+          key: 'RHEL-1234',
+          fields: {
+            summary: '[DEV Task] Test Task',
+          },
+        },
+        {
+          key: 'RHEL-1235',
+          fields: {
+            summary: '[QE Task] Test Task',
+          },
+        },
+        {
+          key: 'RHEL-1236',
+          fields: {
+            summary: '[Upstream] Test Task',
+          },
+        },
+      ] as unknown as Issue[];
+    }
+
     const response = await this.api.issueSearch.searchForIssuesUsingJqlPost({
       jql: `issue in linkedIssues("${issue}") AND type = Task AND status = New AND (${this.composeTaskSummaryJQL(expectedTasks)})`,
       fields: [
