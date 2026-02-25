@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('jira.js', () => {
-  const Version2Client = vi.fn(() => {
+  const Version2Client = vi.fn(function () {
     return {
       serverInfo: {
         getServerInfo: mocks.getServerInfo,
@@ -28,7 +28,7 @@ vi.mock('jira.js', () => {
     };
   });
 
-  const AgileClient = vi.fn(() => {
+  const AgileClient = vi.fn(function () {
     return {
       board: {
         getAllSprints: mocks.getAllSprints,
