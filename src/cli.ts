@@ -5,7 +5,12 @@ import checkbox from '@inquirer/checkbox';
 
 import { Jira } from './jira';
 import { Logger } from './logger';
-import { getDefaultValue, getOptions, raise, tokenUnavailable } from './util';
+import {
+  getDefaultValue,
+  getOptions,
+  getUserFromLogin,
+  tokenUnavailable,
+} from './util';
 
 import { SearchResults } from 'jira.js/dist/esm/types/agile/models';
 import {
@@ -15,7 +20,7 @@ import {
   colorSizeSchema,
   Size,
 } from './schema/jira';
-import { Issue } from 'jira.js/dist/esm/types/version2/models';
+import { Issue } from 'jira.js/dist/esm/types/version3/models/issue';
 
 export function cli(): Command {
   const program = new Command();
@@ -52,10 +57,11 @@ const runProgram = async () => {
 
   const token = process.env.JIRA_API_TOKEN ?? tokenUnavailable();
   const jira = new Jira(
-    'https://issues.redhat.com',
+    'https://redhat.atlassian.net',
     token,
     options.dry,
-    logger
+    logger,
+    getUserFromLogin()
   );
 
   const version = await jira.getVersion();
@@ -105,12 +111,44 @@ const runProgram = async () => {
     );
 
     const availableTasks = [
-      { name: 'DEV Task', value: 39396, checked: true },
-      { name: 'QE Task', value: 39400, checked: true },
-      { name: 'Upstream', value: 39395 },
-      { name: 'Root Cause Analysis Task', value: 40950 },
-      { name: 'Preliminary Testing Task', value: 39398 },
-      { name: 'Integration Testing', value: 48270 },
+      {
+        name: 'DEV Task',
+        summary: '[DEV Task]:',
+        label: 'dev_task',
+        value: 14476,
+        checked: true,
+      },
+      {
+        name: 'QE Task',
+        summary: '[QE Task]:',
+        label: 'qe_task',
+        value: 14480,
+        checked: true,
+      },
+      {
+        name: 'Upstream',
+        summary: '[Upstream]:',
+        label: 'upstream_task',
+        value: 14475,
+      },
+      {
+        name: 'Root Cause Analysis Task',
+        summary: '[Root Cause Analysis Task]:',
+        label: 'root_cause_analysis_task',
+        value: 14483,
+      },
+      {
+        name: 'Preliminary Testing Task',
+        summary: '[Preliminary Testing Task]:',
+        label: 'preliminary_testing_task',
+        value: 14478,
+      },
+      {
+        name: 'Integration Testing',
+        summary: '[Integration Testing Task]:',
+        label: 'integration_testing_task',
+        value: 14481,
+      },
     ];
 
     let answer: number[] = [];
@@ -118,11 +156,21 @@ const runProgram = async () => {
       answer = await checkbox({
         message: `Split ${chalk.bold(issue.key)} into following tasks:\n`,
         choices: [
-          ...availableTasks.map(task => ({
-            name: colorTaskSchema(task.name),
-            value: task.value,
-            checked: task.checked ?? false,
-          })),
+          ...availableTasks.map(task => {
+            const isTaskOpen = issue.fields?.issuelinks?.some(
+              l =>
+                l.type?.outward === 'split to' &&
+                l.outwardIssue?.fields?.summary.startsWith(task.summary) &&
+                l.outwardIssue?.fields?.status.name !== 'Closed'
+            );
+
+            return {
+              name: colorTaskSchema(task.name),
+              value: task.value,
+              checked: task.checked && !isTaskOpen,
+              disabled: isTaskOpen,
+            };
+          }),
           new Separator(),
           { name: 'SKIP', value: -1 },
           { name: 'EXIT', value: -2 },
@@ -235,7 +283,7 @@ const runProgram = async () => {
       }
 
       await jira.setValues(task.key, {
-        assignee: issue.fields?.assignee?.emailAddress,
+        assignee: issue.fields?.assignee?.accountId,
         size: storyPointsAnswer,
         sprint:
           addToSprintAnswer && sprintOrBacklog != -1

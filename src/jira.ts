@@ -1,36 +1,38 @@
-import { AgileClient, Version2Client } from 'jira.js';
+import { AgileClient, Version3Client } from 'jira.js';
 import { SearchResults, Sprint } from 'jira.js/dist/esm/types/agile/models';
-import { Issue } from 'jira.js/dist/esm/types/version2/models';
+import { Issue } from 'jira.js/dist/esm/types/version3/models/issue';
 
 import { raise } from './util';
 import { Size } from './schema/jira';
 import { Logger } from './logger';
 
 export class Jira {
-  readonly api: Version2Client;
+  readonly api: Version3Client;
   readonly agile: AgileClient;
   readonly fields = {
-    automation: 'customfield_12316240',
+    automation: 'customfield_10553',
     assignee: 'assignee',
     priority: 'priority',
-    severity: 'customfield_12316142',
-    sprint: 'customfield_12310940',
-    storyPoints: 'customfield_12310243',
+    severity: 'customfield_10840',
+    sprint: 'customfield_10020',
+    storyPoints: 'customfield_10028',
   };
 
-  readonly issuesWithoutTasksJQL = `issueFunction not in linkedIssuesOf("type = Task AND (summary ~ 'DEV Task' OR summary ~ 'QE Task')") AND type not in (Task, Epic) AND project = "RHEL"`;
+  readonly issuesWithoutTasksJQL = `(labels not in (upstream_task, dev_task, qe_task, root_cause_analysis_task, preliminary_testing_task, integration_testing_task) OR labels is EMPTY) AND type in (Bug, "Story", Vulnerability) AND Project = RHEL AND statusCategory != Done`;
 
   constructor(
     readonly instance: string,
     apiToken: string,
     readonly dry: boolean,
-    readonly logger: Logger
+    readonly logger: Logger,
+    email: string
   ) {
-    this.api = new Version2Client({
+    this.api = new Version3Client({
       host: instance,
       authentication: {
-        oauth2: {
-          accessToken: apiToken,
+        basic: {
+          email,
+          apiToken,
         },
       },
     });
@@ -38,8 +40,9 @@ export class Jira {
     this.agile = new AgileClient({
       host: instance,
       authentication: {
-        oauth2: {
-          accessToken: apiToken,
+        basic: {
+          email,
+          apiToken,
         },
       },
     });
@@ -81,8 +84,10 @@ export class Jira {
         'components',
         this.fields.storyPoints,
         this.fields.severity,
+        'issuelinks',
       ],
     });
+
     return response.issues;
   }
 
@@ -182,7 +187,7 @@ export class Jira {
     }
   ) {
     const assigneeValue = values.assignee
-      ? { [this.fields.assignee]: { name: values.assignee } }
+      ? { [this.fields.assignee]: { accountId: values.assignee } }
       : {};
     const storyPointsValue =
       values.size !== undefined
