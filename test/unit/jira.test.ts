@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('jira.js', () => {
-  const Version2Client = vi.fn(function () {
+  const Version3Client = vi.fn(function () {
     return {
       serverInfo: {
         getServerInfo: mocks.getServerInfo,
@@ -40,7 +40,7 @@ vi.mock('jira.js', () => {
   });
 
   return {
-    Version2Client,
+    Version3Client,
     AgileClient,
   };
 });
@@ -50,10 +50,11 @@ describe('Jira functions', () => {
 
   beforeEach(() => {
     jira = new Jira(
-      'https://issues.redhat.com',
+      'https://redhat.atlassian.net',
       'token',
       false,
-      new Logger(false)
+      new Logger(false),
+      'username'
     );
 
     mocks.getServerInfo.mockReturnValue({
@@ -143,8 +144,9 @@ describe('Jira functions', () => {
         'components',
         jira.fields.storyPoints,
         jira.fields.severity,
+        'issuelinks',
       ],
-      jql: 'assignee = \"assignee\" AND issueFunction not in linkedIssuesOf("type = Task AND (summary ~ \'DEV Task\' OR summary ~ \'QE Task\')") AND type not in (Task, Epic) AND project = "RHEL"',
+      jql: 'assignee = "assignee" AND (labels not in (upstream_task, dev_task, qe_task, root_cause_analysis_task, preliminary_testing_task, integration_testing_task) OR labels is EMPTY) AND type in (Bug, "Story", Vulnerability) AND Project = RHEL AND statusCategory != Done',
       maxResults: 500,
       sprintId: 1,
     });
@@ -173,7 +175,7 @@ describe('Jira functions', () => {
     expect(mocks.editIssue).toHaveBeenCalledWith({
       issueIdOrKey: 'RHEL-1234',
       fields: {
-        assignee: { name: 'assignee' },
+        assignee: { accountId: 'assignee' },
         [jira.fields.sprint]: 1,
       },
     });
@@ -187,7 +189,7 @@ describe('Jira functions', () => {
     expect(mocks.editIssue).toHaveBeenCalledWith({
       issueIdOrKey: 'RHEL-1234',
       fields: {
-        assignee: { name: 'assignee' },
+        assignee: { accountId: 'assignee' },
         [jira.fields.storyPoints]: 3,
         [jira.fields.sprint]: null,
       },
@@ -196,7 +198,7 @@ describe('Jira functions', () => {
 
   test('getIssueURL()', () => {
     expect(jira.getIssueURL('RHEL-1234')).toMatchInlineSnapshot(
-      `"https://issues.redhat.com/browse/RHEL-1234"`
+      `"https://redhat.atlassian.net/browse/RHEL-1234"`
     );
   });
 });
