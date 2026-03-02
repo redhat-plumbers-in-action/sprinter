@@ -144,18 +144,19 @@ export class Jira {
       ] as unknown as Issue[];
     }
 
-    const response = await this.api.issueSearch.searchForIssuesUsingJqlPost({
-      jql: `issue in linkedIssues("${issue}") AND type = Task AND status = New AND (${this.composeTaskSummaryJQL(expectedTasks)})`,
-      fields: [
-        'id',
-        'issuetype',
-        'status',
-        'components',
-        'summary',
-        'assignee',
-        this.fields.storyPoints,
-      ],
-    });
+    const response =
+      await this.api.issueSearch.searchForIssuesUsingJqlEnhancedSearchPost({
+        jql: `issue in linkedIssues("${issue}") AND type = Task AND status = New AND (${this.composeTaskSummaryJQL(expectedTasks)})`,
+        fields: [
+          'id',
+          'issuetype',
+          'status',
+          'components',
+          'summary',
+          'assignee',
+          this.fields.storyPoints,
+        ],
+      });
 
     return response.issues ?? [];
   }
