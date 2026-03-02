@@ -6,7 +6,7 @@ import { Logger } from '../../src/logger';
 const mocks = vi.hoisted(() => {
   return {
     getServerInfo: vi.fn(),
-    searchForIssuesUsingJqlPost: vi.fn(),
+    searchForIssuesUsingJqlEnhancedSearchPost: vi.fn(),
     getIssuesForSprint: vi.fn(),
     editIssue: vi.fn(),
     getAllSprints: vi.fn(),
@@ -20,7 +20,8 @@ vi.mock('jira.js', () => {
         getServerInfo: mocks.getServerInfo,
       },
       issueSearch: {
-        searchForIssuesUsingJqlPost: mocks.searchForIssuesUsingJqlPost,
+        searchForIssuesUsingJqlEnhancedSearchPost:
+          mocks.searchForIssuesUsingJqlEnhancedSearchPost,
       },
       issues: {
         editIssue: mocks.editIssue,
@@ -61,7 +62,7 @@ describe('Jira functions', () => {
       version: '8.0.0',
     });
 
-    mocks.searchForIssuesUsingJqlPost.mockReturnValue({
+    mocks.searchForIssuesUsingJqlEnhancedSearchPost.mockReturnValue({
       issues: [
         {
           key: 'RHEL-1234',
