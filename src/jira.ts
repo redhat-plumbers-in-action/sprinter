@@ -18,7 +18,7 @@ export class Jira {
     storyPoints: 'customfield_10028',
   };
 
-  readonly issuesWithoutTasksJQL = `(labels not in (upstream_task, dev_task, qe_task, root_cause_analysis_task, preliminary_testing_task, integration_testing_task) OR labels is EMPTY) AND type in (Bug, "Story", Vulnerability) AND Project = RHEL AND statusCategory != Done`;
+  readonly nonTaskIssuesJQL = `(labels not in (upstream_task, dev_task, qe_task, root_cause_analysis_task, preliminary_testing_task, integration_testing_task) OR labels is EMPTY) AND type in (Bug, "Story", Vulnerability) AND Project = RHEL AND statusCategory != Done`;
 
   constructor(
     readonly instance: string,
@@ -65,10 +65,10 @@ export class Jira {
   async getIssuesInSprint(
     sprintId: number,
     assignee?: string,
-    issuesWithoutTasks: boolean = true
+    nonTaskIssues: boolean = true
   ): Promise<SearchResults['issues']> {
     let jql = assignee ? `assignee = "${assignee}"` : '';
-    jql += issuesWithoutTasks ? ` AND ${this.issuesWithoutTasksJQL}` : '';
+    jql += nonTaskIssues ? ` AND ${this.nonTaskIssuesJQL}` : '';
 
     const response = await this.agile.sprint.getIssuesForSprint({
       sprintId: +sprintId,
