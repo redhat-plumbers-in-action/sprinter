@@ -151,7 +151,7 @@ const runProgram = async () => {
       },
     ];
 
-    let answer: number[] = [];
+    let answer: string[] = [];
     if (!options.yolo) {
       answer = await checkbox({
         message: `Split ${chalk.bold(issue.key)} into following tasks:\n`,
@@ -172,18 +172,18 @@ const runProgram = async () => {
             };
           }),
           new Separator(),
-          { name: 'SKIP', value: -1 },
-          { name: 'EXIT', value: -2 },
+          { name: 'SKIP', value: '-1' },
+          { name: 'EXIT', value: '-2' },
         ],
         loop: false,
         pageSize: 10,
       });
 
-      if (answer.includes(-1)) {
+      if (answer.includes('-1')) {
         continue;
       }
 
-      if (answer.includes(-2)) {
+      if (answer.includes('-2')) {
         process.exit(0);
       }
     }
