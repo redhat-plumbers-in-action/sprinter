@@ -161,7 +161,7 @@ export class Jira {
     return response.issues ?? [];
   }
 
-  async createTasks(issue: string, tasks: number[]) {
+  async createTasks(issue: string, tasks: string[]) {
     if (this.dry) {
       this.logger.log(
         `Would create tasks: ${tasks.join(', ')} for issue: ${issue}`
@@ -174,7 +174,7 @@ export class Jira {
       issueIdOrKey: issue,
       fields: {
         // Jira expects multi-select values as objects with id/value
-        [this.fields.automation]: tasks.map(id => ({ id: String(id) })),
+        [this.fields.automation]: tasks.map(id => ({ id: id })),
       },
     });
   }

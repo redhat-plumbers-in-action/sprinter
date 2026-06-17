@@ -167,6 +167,16 @@ describe('Jira functions', () => {
     );
   });
 
+  test('createTasks()', async () => {
+    await jira.createTasks('RHEL-1234', ['14476', '14480']);
+    expect(mocks.editIssue).toHaveBeenCalledWith({
+      issueIdOrKey: 'RHEL-1234',
+      fields: {
+        [jira.fields.automation]: [{ id: '14476' }, { id: '14480' }],
+      },
+    });
+  });
+
   test('setValues()', async () => {
     await jira.setValues('RHEL-1234', {
       assignee: 'assignee',
