@@ -1,0 +1,10 @@
+[Unit]
+Description=Run jira-sprinter auto every 20 minutes
+
+[Timer]
+OnCalendar=*:0/20
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

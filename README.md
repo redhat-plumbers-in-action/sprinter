@@ -61,7 +61,7 @@ jira-sprinter
 
 ```md
 $ jira-sprinter --help
-Usage: jira-sprinter [options]
+Usage: jira-sprinter [options] [command]
 
 🏃 Small CLI tool to manage sprints in JIRA Board
 
@@ -74,4 +74,62 @@ Options:
   -n, --nocolor              Disable color output (default: false)
   -x, --dry                  dry run
   -h, --help                 display help for command
+
+Commands:
+  auto [options]             Automatically manages split tasks (DEV and
+                             Preliminary Testing) based on ticket state and
+                             status
 ```
+
+### `auto` command
+
+The `auto` command automates the creation of Preliminary Testing split tasks. It scans the board for issues where Preliminary Testing is marked as "Requested" and creates the corresponding split task if one does not already exist (or was previously closed).
+
+```md
+$ jira-sprinter auto --help
+Usage: jira-sprinter auto [options]
+
+Automatically manages split tasks (DEV and Preliminary Testing) based on ticket
+state and status
+
+Options:
+  -b, --board [board]            Jira Board ID
+  -t, --team [assigned team]     Jira Assigned Team
+  -c, --components [components]  Jira Components
+  -h, --help                     display help for command
+```
+
+## Systemd Timer
+
+You can run the `auto` command on a schedule using the provided systemd units in `systemd/`.
+
+### Setup
+
+1. Edit `systemd/jira-sprinter.service` and set the correct paths:
+
+   - `EnvironmentFile=` -- path to the `.env` file containing `JIRA_API_TOKEN`
+   - `ExecStart=` -- path to the `jira-sprinter` command with the required arguments
+
+2. Copy the units to your user systemd directory:
+
+   ```bash
+   mkdir -p ~/.config/systemd/user
+   cp systemd/jira-sprinter.service ~/.config/systemd/user/
+   cp systemd/jira-sprinter.timer ~/.config/systemd/user/
+   ```
+
+3. Reload systemd, enable and start the timer:
+
+   ```bash
+   systemctl --user daemon-reload
+   systemctl --user enable --now jira-sprinter.timer
+   ```
+
+4. Verify the timer is active:
+
+   ```bash
+   systemctl --user status jira-sprinter.timer
+   systemctl --user list-timers
+   ```
+
+The timer fires every 20 minutes (at :00, :20, and :40). The service uses `Type=oneshot`, so systemd will never start a second instance if a previous run is still in progress.

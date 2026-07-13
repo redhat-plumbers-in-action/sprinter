@@ -1,0 +1,8 @@
+[Unit]
+Description=Create split tasks for Scrum board
+
+[Service]
+Type=oneshot
+Environment=PATH=/home/user/.local/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=/home/user/.config/jira-sprinter/.env
+ExecStart=/usr/bin/npx jira-sprinter auto ...

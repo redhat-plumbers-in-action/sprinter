@@ -5,12 +5,8 @@ import checkbox from '@inquirer/checkbox';
 
 import { Jira } from './jira';
 import { Logger } from './logger';
-import {
-  getDefaultValue,
-  getOptions,
-  getUserFromLogin,
-  tokenUnavailable,
-} from './util';
+import { getDefaultValue, getOptions } from './util';
+import { runAuto } from './auto';
 
 import { SearchResults } from 'jira.js/dist/esm/types/agile/models';
 import {
@@ -30,6 +26,27 @@ export function cli(): Command {
     .description('🏃 Small CLI tool to manage sprints in JIRA Board')
     .version('2.0.1');
 
+  program.addCommand(
+    new Command('auto')
+      .description(
+        'Automatically manages split tasks (DEV and Preliminary Testing) based on ticket state and status'
+      )
+      .option('-b, --board [board]', 'Jira Board ID', getDefaultValue('BOARD'))
+      .requiredOption(
+        '-t, --team [assigned team]',
+        'Jira Assigned Team',
+        getDefaultValue('TEAM')
+      )
+      .option(
+        '-c, --components [components]',
+        'Jira Components',
+        getDefaultValue('COMPONENTS')
+      )
+      .action(async (_opts, command) => {
+        await runAuto(command.optsWithGlobals());
+      })
+  );
+
   program
     .option('-b, --board [board]', 'Jira Board ID', getDefaultValue('BOARD'))
     .option(
@@ -43,29 +60,23 @@ export function cli(): Command {
       getDefaultValue('YOLO')
     )
     .option('-n, --nocolor', 'Disable color output', getDefaultValue('NOCOLOR'))
-    .option('-x, --dry', 'dry run', getDefaultValue('DRY'));
+    .option('-x, --dry', 'dry run', getDefaultValue('DRY'))
+    .action(() => {});
 
   return program;
 }
 
 const runProgram = async () => {
   const program = cli();
-  program.parse();
+  await program.parseAsync();
+
+  // If there are any arguments (like auto), just return, the command logic is handled in separate functions
+  if (program.args.length > 0) return;
 
   const options = getOptions(program.opts());
   const logger = new Logger(!!options.nocolor);
 
-  const token = process.env.JIRA_API_TOKEN ?? tokenUnavailable();
-  const jira = new Jira(
-    'https://redhat.atlassian.net',
-    token,
-    options.dry,
-    logger,
-    getUserFromLogin()
-  );
-
-  const version = await jira.getVersion();
-  console.debug(`JIRA Version: ${version}`);
+  const jira = await Jira.getInstance(options.dry, logger, options.assignee);
 
   const sprints = await jira.getSprints(+options.board);
 
@@ -110,53 +121,12 @@ const runProgram = async () => {
       `See more: ${chalk.italic.underline(jira.getIssueURL(issue.key ?? ''))}\n`
     );
 
-    const availableTasks = [
-      {
-        name: 'DEV Task',
-        summary: '[DEV Task]:',
-        label: 'dev_task',
-        value: '14476',
-        checked: true,
-      },
-      {
-        name: 'QE Task',
-        summary: '[QE Task]:',
-        label: 'qe_task',
-        value: '14480',
-        checked: true,
-      },
-      {
-        name: 'Upstream',
-        summary: '[Upstream]:',
-        label: 'upstream_task',
-        value: '14475',
-      },
-      {
-        name: 'Root Cause Analysis Task',
-        summary: '[Root Cause Analysis Task]:',
-        label: 'root_cause_analysis_task',
-        value: '14483',
-      },
-      {
-        name: 'Preliminary Testing Task',
-        summary: '[Preliminary Testing Task]:',
-        label: 'preliminary_testing_task',
-        value: '14478',
-      },
-      {
-        name: 'Integration Testing',
-        summary: '[Integration Testing Task]:',
-        label: 'integration_testing_task',
-        value: '14481',
-      },
-    ];
-
     let answer: string[] = [];
     if (!options.yolo) {
       answer = await checkbox({
         message: `Split ${chalk.bold(issue.key)} into following tasks:\n`,
         choices: [
-          ...availableTasks.map(task => {
+          ...jira.availableTasks.map(task => {
             const isTaskOpen = issue.fields?.issuelinks?.some(
               l =>
                 l.type?.outward === 'split to' &&
@@ -189,7 +159,7 @@ const runProgram = async () => {
     }
 
     if (options.yolo) {
-      answer = availableTasks
+      answer = jira.availableTasks
         .filter(task => task.checked ?? false)
         .map(task => task.value);
     }
@@ -203,7 +173,7 @@ const runProgram = async () => {
       tasks = await jira.getlinkedTasks(
         issue.key!,
         answer.map(
-          task => availableTasks.find(t => t.value === task)?.name ?? ''
+          task => jira.availableTasks.find(t => t.value === task)?.name ?? ''
         )
       );
 

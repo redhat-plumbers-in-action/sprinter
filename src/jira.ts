@@ -2,7 +2,7 @@ import { AgileClient, Version3Client } from 'jira.js';
 import { SearchResults, Sprint } from 'jira.js/dist/esm/types/agile/models';
 import { Issue } from 'jira.js/dist/esm/types/version3/models/issue';
 
-import { raise } from './util';
+import { raise, tokenUnavailable } from './util';
 import { Size } from './schema/jira';
 import { Logger } from './logger';
 
@@ -16,9 +16,56 @@ export class Jira {
     severity: 'customfield_10840',
     sprint: 'customfield_10020',
     storyPoints: 'customfield_10028',
+    preliminaryTesting: 'customfield_10879',
   };
 
-  readonly nonTaskIssuesJQL = `(labels not in (upstream_task, dev_task, qe_task, root_cause_analysis_task, preliminary_testing_task, integration_testing_task) OR labels is EMPTY) AND type in (Bug, "Story", Vulnerability) AND Project = RHEL AND statusCategory != Done`;
+  readonly devTask = {
+    name: 'DEV Task',
+    summary: '[DEV Task]:',
+    label: 'dev_task',
+    value: '14476',
+  };
+  readonly qeTask = {
+    name: 'QE Task',
+    summary: '[QE Task]:',
+    label: 'qe_task',
+    value: '14480',
+  };
+  readonly upstreamTask = {
+    name: 'Upstream',
+    summary: '[Upstream]:',
+    label: 'upstream_task',
+    value: '14475',
+  };
+  readonly rootCauseAnalysisTask = {
+    name: 'Root Cause Analysis Task',
+    summary: '[Root Cause Analysis Task]:',
+    label: 'root_cause_analysis_task',
+    value: '14483',
+  };
+  readonly preliminaryTestingTask = {
+    name: 'Preliminary Testing Task',
+    summary: '[Preliminary Testing Task]:',
+    label: 'preliminary_testing_task',
+    value: '14478',
+  };
+  readonly integrationTestingTask = {
+    name: 'Integration Testing',
+    summary: '[Integration Testing Task]:',
+    label: 'integration_testing_task',
+    value: '14481',
+  };
+  readonly availableTasks = [
+    { ...this.devTask, checked: true },
+    { ...this.qeTask, checked: true },
+    { ...this.upstreamTask, checked: false },
+    { ...this.rootCauseAnalysisTask, checked: false },
+    { ...this.preliminaryTestingTask, checked: false },
+    { ...this.integrationTestingTask, checked: false },
+  ];
+  readonly availableTasksLabels = this.availableTasks.map(task => task.label);
+
+  readonly nonTaskIssuesJQL = `(labels not in (${this.availableTasksLabels.join(', ')}) OR labels is EMPTY) AND type in (Bug, "Story", Vulnerability) AND Project = RHEL AND statusCategory != Done`;
 
   constructor(
     readonly instance: string,
@@ -109,6 +156,32 @@ export class Jira {
         'components',
         this.fields.storyPoints,
         this.fields.severity,
+      ],
+    });
+
+    return response.issues;
+  }
+
+  async getBoardIssues(
+    boardId: number,
+    jql?: string
+  ): Promise<SearchResults['issues']> {
+    const response = await this.agile.board.getIssuesForBoard({
+      boardId: boardId,
+      maxResults: 500,
+      jql: jql ?? '',
+      fields: [
+        'id',
+        'issuetype',
+        'status',
+        'summary',
+        'assignee',
+        'priority',
+        'components',
+        this.fields.storyPoints,
+        this.fields.severity,
+        this.fields.preliminaryTesting,
+        'issuelinks',
       ],
     });
 
@@ -207,5 +280,22 @@ export class Jira {
 
   getIssueURL(issue: string) {
     return `${this.instance}/browse/${issue}`;
+  }
+
+  static async getInstance(dryRun: boolean, logger: Logger, assignee: string) {
+    const apiToken = process.env.JIRA_API_TOKEN ?? tokenUnavailable();
+
+    const instance = new this(
+      'https://redhat.atlassian.net',
+      apiToken,
+      dryRun,
+      logger,
+      assignee
+    );
+
+    const version = await instance.getVersion();
+    console.debug(`JIRA Version: ${version}`);
+
+    return instance;
   }
 }
