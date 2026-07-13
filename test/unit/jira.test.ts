@@ -147,7 +147,7 @@ describe('Jira functions', () => {
         jira.fields.severity,
         'issuelinks',
       ],
-      jql: 'assignee = "assignee" AND (labels not in (upstream_task, dev_task, qe_task, root_cause_analysis_task, preliminary_testing_task, integration_testing_task) OR labels is EMPTY) AND type in (Bug, "Story", Vulnerability) AND Project = RHEL AND statusCategory != Done',
+      jql: 'assignee = "assignee" AND (labels not in (dev_task, qe_task, upstream_task, root_cause_analysis_task, preliminary_testing_task, integration_testing_task) OR labels is EMPTY) AND type in (Bug, "Story", Vulnerability) AND Project = RHEL AND statusCategory != Done',
       maxResults: 500,
       sprintId: 1,
     });
