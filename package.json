@@ -40,7 +40,7 @@
     "chalk": "5.6.2",
     "commander": "15.0.0",
     "dotenv": "17.4.2",
-    "jira.js": "5.3.1",
+    "jira.js": "5.4.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
