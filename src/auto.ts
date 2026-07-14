@@ -32,7 +32,7 @@ export async function runAuto(options: OptionValues): Promise<void> {
 
   const preliminaryTestingFailed = boardIssues.filter(
     issue =>
-      issue.fields?.[jira.fields.preliminaryTesting]?.value === 'Failed' &&
+      issue.fields?.[jira.fields.preliminaryTesting]?.value === 'Fail' &&
       issue.fields?.issuelinks?.some(
         l =>
           l.type?.outward === 'split to' &&
@@ -56,6 +56,34 @@ export async function runAuto(options: OptionValues): Promise<void> {
     }
 
     await jira.createTasks(issue.key, [jira.preliminaryTestingTask.value]);
+  }
+
+  logger.log(
+    `${chalk.red('Closing Preliminary Testing Task - Testing Failed...')}`
+  );
+
+  for (const issue of preliminaryTestingFailed) {
+    if (!issue.key) {
+      continue;
+    }
+
+    const preliminaryTestingTask = issue.fields?.issuelinks?.find(
+      l =>
+        l.type?.outward === 'split to' &&
+        l.outwardIssue?.fields?.summary.startsWith(
+          jira.preliminaryTestingTask.summary
+        ) &&
+        l.outwardIssue?.fields?.status.name !== 'Closed'
+    );
+
+    if (!preliminaryTestingTask || !preliminaryTestingTask.outwardIssue?.key) {
+      logger.log(
+        `${chalk.red('Preliminary Testing Task not found')} - ${issue.key}`
+      );
+      continue;
+    }
+
+    await jira.closeTask(preliminaryTestingTask.outwardIssue?.key);
   }
 
   process.exit(0);

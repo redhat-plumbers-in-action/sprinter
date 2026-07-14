@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => {
     searchForIssuesUsingJqlEnhancedSearchPost: vi.fn(),
     getIssuesForSprint: vi.fn(),
     editIssue: vi.fn(),
+    doTransition: vi.fn(),
     getAllSprints: vi.fn(),
   };
 });
@@ -25,6 +26,7 @@ vi.mock('jira.js', () => {
       },
       issues: {
         editIssue: mocks.editIssue,
+        doTransition: mocks.doTransition,
       },
     };
   });
@@ -211,5 +213,35 @@ describe('Jira functions', () => {
     expect(jira.getIssueURL('RHEL-1234')).toMatchInlineSnapshot(
       `"https://redhat.atlassian.net/browse/RHEL-1234"`
     );
+  });
+
+  describe('closeTask()', () => {
+    test('calls doTransition with Closed transition', async () => {
+      mocks.doTransition.mockResolvedValue({});
+
+      await jira.closeTask('RHEL-5000');
+
+      expect(mocks.doTransition).toHaveBeenCalledWith({
+        issueIdOrKey: 'RHEL-5000',
+        transition: {
+          id: '31',
+        },
+      });
+    });
+
+    test('in dry mode, logs message and does not call doTransition', async () => {
+      const dryJira = new Jira(
+        'https://redhat.atlassian.net',
+        'token',
+        true,
+        new Logger(false),
+        'username'
+      );
+      mocks.doTransition.mockClear();
+
+      await dryJira.closeTask('RHEL-5001');
+
+      expect(mocks.doTransition).not.toHaveBeenCalled();
+    });
   });
 });

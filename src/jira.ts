@@ -252,6 +252,22 @@ export class Jira {
     });
   }
 
+  async closeTask(issue: string) {
+    if (this.dry) {
+      this.logger.log(`Would close task: ${issue}`);
+      return;
+    }
+
+    this.logger.log(`Closing task: ${issue}`);
+
+    await this.api.issues.doTransition({
+      issueIdOrKey: issue,
+      transition: {
+        id: '31',
+      },
+    });
+  }
+
   async setValues(
     issue: string,
     values: {

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => {
   return {
     getBoardIssues: vi.fn(),
     createTasks: vi.fn(),
+    closeTask: vi.fn(),
     processExit: vi.fn(),
   };
 });
@@ -25,6 +26,7 @@ vi.mock('../../src/jira', () => {
         },
         getBoardIssues: mocks.getBoardIssues,
         createTasks: mocks.createTasks,
+        closeTask: mocks.closeTask,
       }),
     },
   };
@@ -35,6 +37,7 @@ describe('runAuto()', () => {
     vi.spyOn(process, 'exit').mockImplementation(mocks.processExit as never);
     mocks.getBoardIssues.mockResolvedValue([]);
     mocks.createTasks.mockResolvedValue(undefined);
+    mocks.closeTask.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -137,16 +140,17 @@ describe('runAuto()', () => {
     expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-2100', ['14478']);
   });
 
-  test('does not create tasks for issues with Preliminary Testing = "Failed"', async () => {
+  test('does not create tasks for issues with Preliminary Testing = "Fail"', async () => {
     mocks.getBoardIssues.mockResolvedValue([
       {
         key: 'RHEL-3000',
         fields: {
-          customfield_10879: { value: 'Failed' },
+          customfield_10879: { value: 'Fail' },
           issuelinks: [
             {
               type: { outward: 'split to' },
               outwardIssue: {
+                key: 'RHEL-3001',
                 fields: {
                   summary: '[Preliminary Testing Task]: RHEL-3000',
                   status: { name: 'In Progress' },
@@ -193,6 +197,179 @@ describe('runAuto()', () => {
     await runAuto(defaultOptions);
 
     expect(mocks.createTasks).not.toHaveBeenCalled();
+    expect(mocks.closeTask).not.toHaveBeenCalled();
     expect(mocks.processExit).toHaveBeenCalledWith(0);
+  });
+
+  test('closes the linked preliminary testing task when testing has failed', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-4000',
+        fields: {
+          customfield_10879: { value: 'Fail' },
+          issuelinks: [
+            {
+              type: { outward: 'split to' },
+              outwardIssue: {
+                key: 'RHEL-4001',
+                fields: {
+                  summary: '[Preliminary Testing Task]: RHEL-4000',
+                  status: { name: 'In Progress' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.closeTask).toHaveBeenCalledTimes(1);
+    expect(mocks.closeTask).toHaveBeenCalledWith('RHEL-4001');
+  });
+
+  test('does not close tasks for "Fail" issues when the linked task is already Closed', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-4100',
+        fields: {
+          customfield_10879: { value: 'Fail' },
+          issuelinks: [
+            {
+              type: { outward: 'split to' },
+              outwardIssue: {
+                key: 'RHEL-4101',
+                fields: {
+                  summary: '[Preliminary Testing Task]: RHEL-4100',
+                  status: { name: 'Closed' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.closeTask).not.toHaveBeenCalled();
+  });
+
+  test('skips closing when "Fail" issue has no matching split task link', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-4200',
+        fields: {
+          customfield_10879: { value: 'Fail' },
+          issuelinks: [
+            {
+              type: { outward: 'blocks' },
+              outwardIssue: {
+                key: 'RHEL-4201',
+                fields: {
+                  summary: 'Unrelated task',
+                  status: { name: 'Open' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.closeTask).not.toHaveBeenCalled();
+  });
+
+  test('skips closing when "Fail" issue has no key', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: undefined,
+        fields: {
+          customfield_10879: { value: 'Fail' },
+          issuelinks: [
+            {
+              type: { outward: 'split to' },
+              outwardIssue: {
+                key: 'RHEL-4301',
+                fields: {
+                  summary: '[Preliminary Testing Task]: RHEL-4300',
+                  status: { name: 'In Progress' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.closeTask).not.toHaveBeenCalled();
+  });
+
+  test('skips closing when the linked split task has no key', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-4400',
+        fields: {
+          customfield_10879: { value: 'Fail' },
+          issuelinks: [
+            {
+              type: { outward: 'split to' },
+              outwardIssue: {
+                fields: {
+                  summary: '[Preliminary Testing Task]: RHEL-4400',
+                  status: { name: 'In Progress' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.closeTask).not.toHaveBeenCalled();
+  });
+
+  test('handles both "Requested" and "Fail" issues in the same board', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-5000',
+        fields: {
+          customfield_10879: { value: 'Requested' },
+          issuelinks: [],
+        },
+      },
+      {
+        key: 'RHEL-5100',
+        fields: {
+          customfield_10879: { value: 'Fail' },
+          issuelinks: [
+            {
+              type: { outward: 'split to' },
+              outwardIssue: {
+                key: 'RHEL-5101',
+                fields: {
+                  summary: '[Preliminary Testing Task]: RHEL-5100',
+                  status: { name: 'Open' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).toHaveBeenCalledTimes(1);
+    expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-5000', ['14478']);
+    expect(mocks.closeTask).toHaveBeenCalledTimes(1);
+    expect(mocks.closeTask).toHaveBeenCalledWith('RHEL-5101');
   });
 });
