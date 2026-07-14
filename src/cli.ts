@@ -24,7 +24,7 @@ export function cli(): Command {
   program
     .name('jira-sprinter')
     .description('🏃 Small CLI tool to manage sprints in JIRA Board')
-    .version('2.1.0');
+    .version('2.1.1');
 
   program.addCommand(
     new Command('auto')
