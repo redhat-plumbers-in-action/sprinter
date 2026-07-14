@@ -599,12 +599,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:25.9.3":
-  version: 25.9.3
-  resolution: "@types/node@npm:25.9.3"
+"@types/node@npm:25.9.5":
+  version: 25.9.5
+  resolution: "@types/node@npm:25.9.5"
   dependencies:
     undici-types: "npm:>=7.24.0 <7.24.7"
-  checksum: 10c0/72d3aece9d42c2c641bcd3f3cb2dc2828b4bd384dfcbd910c404b8859a68bd69d50c4769ce7defd4ff5e049768e23e615f09407ea2cbbb5f44b90d75a7c6b8ca
+  checksum: 10c0/addbfe55f14d6a7f149a8796c2fca68463ac6caf911c623f552d07385691d36c0669a9c38724350d0e958131827d59a63c18781e753dede8113a903dd62b7932
   languageName: node
   linkType: hard
 
@@ -1315,7 +1315,7 @@ __metadata:
     "@inquirer/checkbox": "npm:^5.2.1"
     "@inquirer/select": "npm:5.2.1"
     "@total-typescript/ts-reset": "npm:0.6.1"
-    "@types/node": "npm:25.9.3"
+    "@types/node": "npm:25.9.5"
     "@vitest/coverage-v8": "npm:4.1.9"
     chalk: "npm:5.6.2"
     commander: "npm:15.0.0"
