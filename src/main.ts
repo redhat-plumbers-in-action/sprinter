@@ -8,6 +8,7 @@ import '@total-typescript/ts-reset';
 import runProgram from './cli';
 
 dotenv.config({
+  quiet: true,
   path: [
     `${path.resolve(process.cwd(), '.env')}`,
     `${path.resolve(os.homedir(), '.config', 'jira-sprinter', '.env')}`,
