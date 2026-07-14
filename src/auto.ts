@@ -46,9 +46,11 @@ export async function runAuto(options: OptionValues): Promise<void> {
     `${chalk.red('Preliminary Testing Failed')} - ${preliminaryTestingFailed.length}`
   );
 
-  logger.log(
-    `${chalk.cyan('Creating split tasks for Preliminary Testing Requested...')}`
-  );
+  if (preliminaryTestingRequested.length > 0) {
+    logger.log(
+      `${chalk.cyan('Creating split tasks for Preliminary Testing Requested...')}`
+    );
+  }
 
   for (const issue of preliminaryTestingRequested) {
     if (!issue.key) {
@@ -58,9 +60,11 @@ export async function runAuto(options: OptionValues): Promise<void> {
     await jira.createTasks(issue.key, [jira.preliminaryTestingTask.value]);
   }
 
-  logger.log(
-    `${chalk.red('Closing Preliminary Testing Task - Testing Failed...')}`
-  );
+  if (preliminaryTestingFailed.length > 0) {
+    logger.log(
+      `${chalk.red('Closing Preliminary Testing Task - Testing Failed...')}`
+    );
+  }
 
   for (const issue of preliminaryTestingFailed) {
     if (!issue.key) {
