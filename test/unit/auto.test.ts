@@ -24,6 +24,12 @@ vi.mock('../../src/jira', () => {
           label: 'preliminary_testing_task',
           value: '14478',
         },
+        qeTask: {
+          name: 'QE Task',
+          summary: '[QE Task]:',
+          label: 'qe_task',
+          value: '14480',
+        },
         getBoardIssues: mocks.getBoardIssues,
         createTasks: mocks.createTasks,
         closeTask: mocks.closeTask,
@@ -57,6 +63,7 @@ describe('runAuto()', () => {
       {
         key: 'RHEL-1000',
         fields: {
+          status: { name: 'New' },
           customfield_10879: { value: 'Requested' },
           issuelinks: [],
         },
@@ -64,6 +71,7 @@ describe('runAuto()', () => {
       {
         key: 'RHEL-1001',
         fields: {
+          status: { name: 'New' },
           customfield_10879: { value: 'Requested' },
           issuelinks: [
             {
@@ -92,6 +100,7 @@ describe('runAuto()', () => {
       {
         key: 'RHEL-2000',
         fields: {
+          status: { name: 'New' },
           customfield_10879: { value: 'Requested' },
           issuelinks: [
             {
@@ -118,6 +127,7 @@ describe('runAuto()', () => {
       {
         key: 'RHEL-2100',
         fields: {
+          status: { name: 'New' },
           customfield_10879: { value: 'Requested' },
           issuelinks: [
             {
@@ -145,6 +155,7 @@ describe('runAuto()', () => {
       {
         key: 'RHEL-3000',
         fields: {
+          status: { name: 'New' },
           customfield_10879: { value: 'Fail' },
           issuelinks: [
             {
@@ -172,6 +183,7 @@ describe('runAuto()', () => {
       {
         key: undefined,
         fields: {
+          status: { name: 'New' },
           customfield_10879: { value: 'Requested' },
           issuelinks: [],
         },
@@ -206,6 +218,7 @@ describe('runAuto()', () => {
       {
         key: 'RHEL-4000',
         fields: {
+          status: { name: 'New' },
           customfield_10879: { value: 'Fail' },
           issuelinks: [
             {
@@ -234,6 +247,7 @@ describe('runAuto()', () => {
       {
         key: 'RHEL-4100',
         fields: {
+          status: { name: 'New' },
           customfield_10879: { value: 'Fail' },
           issuelinks: [
             {
@@ -261,6 +275,7 @@ describe('runAuto()', () => {
       {
         key: 'RHEL-4200',
         fields: {
+          status: { name: 'New' },
           customfield_10879: { value: 'Fail' },
           issuelinks: [
             {
@@ -288,6 +303,7 @@ describe('runAuto()', () => {
       {
         key: undefined,
         fields: {
+          status: { name: 'New' },
           customfield_10879: { value: 'Fail' },
           issuelinks: [
             {
@@ -315,6 +331,7 @@ describe('runAuto()', () => {
       {
         key: 'RHEL-4400',
         fields: {
+          status: { name: 'New' },
           customfield_10879: { value: 'Fail' },
           issuelinks: [
             {
@@ -341,6 +358,7 @@ describe('runAuto()', () => {
       {
         key: 'RHEL-5000',
         fields: {
+          status: { name: 'New' },
           customfield_10879: { value: 'Requested' },
           issuelinks: [],
         },
@@ -348,6 +366,7 @@ describe('runAuto()', () => {
       {
         key: 'RHEL-5100',
         fields: {
+          status: { name: 'New' },
           customfield_10879: { value: 'Fail' },
           issuelinks: [
             {
@@ -371,5 +390,172 @@ describe('runAuto()', () => {
     expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-5000', ['14478']);
     expect(mocks.closeTask).toHaveBeenCalledTimes(1);
     expect(mocks.closeTask).toHaveBeenCalledWith('RHEL-5101');
+  });
+
+  test('creates QE task for issues in Integration status without an open QE split task', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-6000',
+        fields: {
+          status: { name: 'Integration' },
+          issuelinks: [],
+        },
+      },
+      {
+        key: 'RHEL-6001',
+        fields: {
+          status: { name: 'Integration' },
+          issuelinks: [
+            {
+              type: { outward: 'blocks' },
+              outwardIssue: {
+                fields: {
+                  summary: 'Unrelated link',
+                  status: { name: 'Open' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).toHaveBeenCalledTimes(2);
+    expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-6000', ['14480']);
+    expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-6001', ['14480']);
+  });
+
+  test('skips issues in Integration that already have an open QE split task', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-6100',
+        fields: {
+          status: { name: 'Integration' },
+          issuelinks: [
+            {
+              type: { outward: 'split to' },
+              outwardIssue: {
+                fields: {
+                  summary: '[QE Task]: RHEL-6100',
+                  status: { name: 'Open' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).not.toHaveBeenCalled();
+  });
+
+  test('creates QE task when the existing QE split task is Closed', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-6200',
+        fields: {
+          status: { name: 'Integration' },
+          issuelinks: [
+            {
+              type: { outward: 'split to' },
+              outwardIssue: {
+                fields: {
+                  summary: '[QE Task]: RHEL-6200',
+                  status: { name: 'Closed' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).toHaveBeenCalledTimes(1);
+    expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-6200', ['14480']);
+  });
+
+  test('skips Integration issues without a key when creating QE tasks', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: undefined,
+        fields: {
+          status: { name: 'Integration' },
+          issuelinks: [],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).not.toHaveBeenCalled();
+  });
+
+  test('does not create QE task for issues not in Integration status', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-6300',
+        fields: {
+          status: { name: 'In Progress' },
+          issuelinks: [],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).not.toHaveBeenCalled();
+  });
+
+  test('handles "Requested", "Fail", and Integration issues together', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-7000',
+        fields: {
+          status: { name: 'New' },
+          customfield_10879: { value: 'Requested' },
+          issuelinks: [],
+        },
+      },
+      {
+        key: 'RHEL-7100',
+        fields: {
+          status: { name: 'New' },
+          customfield_10879: { value: 'Fail' },
+          issuelinks: [
+            {
+              type: { outward: 'split to' },
+              outwardIssue: {
+                key: 'RHEL-7101',
+                fields: {
+                  summary: '[Preliminary Testing Task]: RHEL-7100',
+                  status: { name: 'Open' },
+                },
+              },
+            },
+          ],
+        },
+      },
+      {
+        key: 'RHEL-7200',
+        fields: {
+          status: { name: 'Integration' },
+          issuelinks: [],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).toHaveBeenCalledTimes(2);
+    expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-7000', ['14478']);
+    expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-7200', ['14480']);
+    expect(mocks.closeTask).toHaveBeenCalledTimes(1);
+    expect(mocks.closeTask).toHaveBeenCalledWith('RHEL-7101');
   });
 });
