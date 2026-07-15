@@ -26,9 +26,11 @@ export async function runAuto(options: OptionValues): Promise<void> {
           l.outwardIssue?.fields?.status.name !== 'Closed'
       )
   );
-  logger.log(
-    `${chalk.green('Preliminary Testing Requested')} - ${preliminaryTestingRequested.length}`
-  );
+  if (preliminaryTestingRequested.length > 0) {
+    logger.log(
+      `${chalk.green('Preliminary Testing Requested')} - ${preliminaryTestingRequested.length}`
+    );
+  }
 
   const preliminaryTestingFailed = boardIssues.filter(
     issue =>
@@ -42,9 +44,27 @@ export async function runAuto(options: OptionValues): Promise<void> {
           l.outwardIssue?.fields?.status.name !== 'Closed'
       )
   );
-  logger.log(
-    `${chalk.red('Preliminary Testing Failed')} - ${preliminaryTestingFailed.length}`
+  if (preliminaryTestingFailed.length > 0) {
+    logger.log(
+      `${chalk.red('Preliminary Testing Failed')} - ${preliminaryTestingFailed.length}`
+    );
+  }
+
+  const issuesInIntegration = boardIssues.filter(
+    issue =>
+      issue.fields?.status.name === 'Integration' &&
+      !issue.fields?.issuelinks?.some(
+        l =>
+          l.type?.outward === 'split to' &&
+          l.outwardIssue?.fields?.summary.startsWith(jira.qeTask.summary) &&
+          l.outwardIssue?.fields?.status.name !== 'Closed'
+      )
   );
+  if (issuesInIntegration.length > 0) {
+    logger.log(
+      `${chalk.yellow('Issues in Integration w/o QE Task')} - ${issuesInIntegration.length}`
+    );
+  }
 
   if (preliminaryTestingRequested.length > 0) {
     logger.log(
@@ -88,6 +108,20 @@ export async function runAuto(options: OptionValues): Promise<void> {
     }
 
     await jira.closeTask(preliminaryTestingTask.outwardIssue?.key);
+  }
+
+  if (issuesInIntegration.length > 0) {
+    logger.log(
+      `${chalk.cyan('Creating split tasks for Issues in Integration w/o QE Task...')}`
+    );
+  }
+
+  for (const issue of issuesInIntegration) {
+    if (!issue.key) {
+      continue;
+    }
+
+    await jira.createTasks(issue.key, [jira.qeTask.value]);
   }
 
   process.exit(0);

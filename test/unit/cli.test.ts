@@ -65,9 +65,8 @@ describe('CLI functions', () => {
         -h, --help                 display help for command
 
       Commands:
-        auto [options]             Automatically manages split tasks (DEV and
-                                   Preliminary Testing) based on ticket state and
-                                   status
+        auto [options]             Automatically manages split tasks (Preliminary
+                                   Testing and QE) based on ticket state and status
       "
     `);
   });
@@ -87,7 +86,7 @@ describe('CLI functions', () => {
     expect(autoCmd.helpInformation()).toMatchInlineSnapshot(`
       "Usage: jira-sprinter auto [options]
 
-      Automatically manages split tasks (DEV and Preliminary Testing) based on ticket
+      Automatically manages split tasks (Preliminary Testing and QE) based on ticket
       state and status
 
       Options:

@@ -76,20 +76,23 @@ Options:
   -h, --help                 display help for command
 
 Commands:
-  auto [options]             Automatically manages split tasks (DEV and
-                             Preliminary Testing) based on ticket state and
-                             status
+  auto [options]             Automatically manages split tasks (Preliminary
+                             Testing and QE) based on ticket state and status
 ```
 
 ### `auto` command
 
-The `auto` command automates the creation of Preliminary Testing split tasks. It scans the board for issues where Preliminary Testing is marked as "Requested" and creates the corresponding split task if one does not already exist (or was previously closed).
+The `auto` command automates the management of split tasks based on ticket state and status. It performs the following actions:
+
+- **Preliminary Testing Requested**: Scans the board for issues where Preliminary Testing is marked as "Requested" and creates the corresponding split task if one does not already exist (or was previously closed).
+- **Preliminary Testing Failed**: When testing has failed, automatically closes the linked Preliminary Testing split task.
+- **Integration without QE Task**: Finds issues in "Integration" status that lack an open QE Task and creates one automatically.
 
 ```md
 $ jira-sprinter auto --help
 Usage: jira-sprinter auto [options]
 
-Automatically manages split tasks (DEV and Preliminary Testing) based on ticket
+Automatically manages split tasks (Preliminary Testing and QE) based on ticket
 state and status
 
 Options:

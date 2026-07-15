@@ -29,7 +29,7 @@ export function cli(): Command {
   program.addCommand(
     new Command('auto')
       .description(
-        'Automatically manages split tasks (DEV and Preliminary Testing) based on ticket state and status'
+        'Automatically manages split tasks (Preliminary Testing and QE) based on ticket state and status'
       )
       .option('-b, --board [board]', 'Jira Board ID', getDefaultValue('BOARD'))
       .requiredOption(
