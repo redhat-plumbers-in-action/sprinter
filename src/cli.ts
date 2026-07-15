@@ -106,7 +106,7 @@ const runProgram = async () => {
   }
 
   if (issues.length === 0) {
-    logger.log(`${chalk.green('No issues found')}.`);
+    logger.log(chalk.green('No issues found'));
     process.exit(0);
   }
 
@@ -179,7 +179,7 @@ const runProgram = async () => {
 
       if (Array.isArray(tasks) && tasks.length >= answer.length) break;
       if (attempt < 10) {
-        logger.log(`Waiting for tasks to be created...`);
+        logger.log(chalk.dim('Waiting for tasks to be created...'));
         await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
@@ -190,7 +190,7 @@ const runProgram = async () => {
         continue;
       }
 
-      logger.log(`${chalk.italic(task.fields.summary)}`);
+      logger.log(chalk.italic(task.fields.summary));
 
       let storyPointsAnswer: Size | undefined;
       let addToSprintAnswer: boolean | undefined;
@@ -248,7 +248,7 @@ const runProgram = async () => {
         storyPointsAnswer = issue.fields?.[jira.fields.storyPoints];
         addToSprintAnswer = sprintOrBacklog != -1;
         logger.log(
-          `Setting story points to ${colorSizeSchema.parse(storyPointsAnswer)} and adding it to the sprint.`
+          `  ${chalk.cyan('Story points')}: ${colorSizeSchema.parse(storyPointsAnswer)}, ${chalk.cyan('Sprint')}: ${addToSprintAnswer ? chalk.green('yes') : chalk.red('no')}`
         );
       }
 
@@ -263,7 +263,7 @@ const runProgram = async () => {
     }
 
     logger.log(
-      `Dropping ${chalk.bold(issue.key)} from sprint and setting story points to ${chalk.bold(0)}...`
+      `${chalk.dim(`Resetting ${issue.key} — story points → 0, removing from sprint`)}`
     );
     await jira.setValues(issue.key!, { size: 0, sprint: null });
   }
