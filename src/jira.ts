@@ -2,6 +2,8 @@ import { AgileClient, Version3Client } from 'jira.js';
 import { SearchResults, Sprint } from 'jira.js/dist/esm/types/agile/models';
 import { Issue } from 'jira.js/dist/esm/types/version3/models/issue';
 
+import chalk from 'chalk';
+
 import { raise, tokenUnavailable } from './util';
 import { Size } from './schema/jira';
 import { Logger } from './logger';
@@ -194,7 +196,9 @@ export class Jira {
 
   async getlinkedTasks(issue: string, expectedTasks: string[]) {
     if (this.dry) {
-      this.logger.log(`Would get linked tasks for issue: ${issue}`);
+      this.logger.log(
+        `  ${chalk.dim(`Fetching linked tasks for ${issue} (dry-run)`)}`
+      );
       return [
         {
           key: 'RHEL-1234',
@@ -237,12 +241,14 @@ export class Jira {
   async createTasks(issue: string, tasks: string[]) {
     if (this.dry) {
       this.logger.log(
-        `Would create tasks: ${tasks.join(', ')} for issue: ${issue}`
+        `  ${chalk.dim(`Creating tasks ${tasks.join(', ')} for ${issue} (dry-run)`)}`
       );
       return;
     }
 
-    this.logger.log(`Creating tasks: ${tasks.join(', ')} for issue: ${issue}`);
+    this.logger.log(
+      `  ${chalk.cyan(`Creating tasks ${tasks.join(', ')} for ${issue}`)}`
+    );
     await this.api.issues.editIssue({
       issueIdOrKey: issue,
       fields: {
@@ -254,11 +260,11 @@ export class Jira {
 
   async closeTask(issue: string) {
     if (this.dry) {
-      this.logger.log(`Would close task: ${issue}`);
+      this.logger.log(`  ${chalk.dim(`Closing task ${issue} (dry-run)`)}`);
       return;
     }
 
-    this.logger.log(`Closing task: ${issue}`);
+    this.logger.log(`  ${chalk.cyan(`Closing task ${issue}`)}`);
 
     await this.api.issues.doTransition({
       issueIdOrKey: issue,
@@ -310,7 +316,7 @@ export class Jira {
     );
 
     const version = await instance.getVersion();
-    console.debug(`JIRA Version: ${version}`);
+    logger.log(chalk.dim(`JIRA v${version}`));
 
     return instance;
   }
