@@ -9,6 +9,10 @@ export async function runAuto(options: OptionValues): Promise<void> {
 
   const jira = await Jira.getInstance(options.dry, logger, options.assignee);
 
+  logger.log(
+    `${chalk.cyan(`Verifying issues in board ${options.board} - team: ${options.team}`)}`
+  );
+
   const boardIssues = await jira.getBoardIssues(
     options.board,
     `project = RHEL and issuetype in (Bug, Story, Vulnerability) and status != Closed`
@@ -26,11 +30,6 @@ export async function runAuto(options: OptionValues): Promise<void> {
           l.outwardIssue?.fields?.status.name !== 'Closed'
       )
   );
-  if (preliminaryTestingRequested.length > 0) {
-    logger.log(
-      `${chalk.green('Preliminary Testing Requested')} - ${preliminaryTestingRequested.length}`
-    );
-  }
 
   const preliminaryTestingFailed = boardIssues.filter(
     issue =>
@@ -44,11 +43,6 @@ export async function runAuto(options: OptionValues): Promise<void> {
           l.outwardIssue?.fields?.status.name !== 'Closed'
       )
   );
-  if (preliminaryTestingFailed.length > 0) {
-    logger.log(
-      `${chalk.red('Preliminary Testing Failed')} - ${preliminaryTestingFailed.length}`
-    );
-  }
 
   const issuesInIntegration = boardIssues.filter(
     issue =>
@@ -60,11 +54,6 @@ export async function runAuto(options: OptionValues): Promise<void> {
           l.outwardIssue?.fields?.status.name !== 'Closed'
       )
   );
-  if (issuesInIntegration.length > 0) {
-    logger.log(
-      `${chalk.yellow('Issues in Integration w/o QE Task')} - ${issuesInIntegration.length}`
-    );
-  }
 
   const issuesInReleasePending = boardIssues.filter(
     issue =>
@@ -76,16 +65,29 @@ export async function runAuto(options: OptionValues): Promise<void> {
           l.outwardIssue?.fields?.status.name !== 'Closed'
       )
   );
-  if (issuesInReleasePending.length > 0) {
-    logger.log(
-      `${chalk.yellow('Issues in Release Pending with QE Task')} - ${issuesInReleasePending.length}`
-    );
+
+  const summary = [
+    {
+      label: 'Preliminary Testing Requested',
+      count: preliminaryTestingRequested.length,
+    },
+    {
+      label: 'Preliminary Testing Failed',
+      count: preliminaryTestingFailed.length,
+    },
+    { label: 'Integration w/o QE Task', count: issuesInIntegration.length },
+    {
+      label: 'Release Pending w/ QE Task',
+      count: issuesInReleasePending.length,
+    },
+  ].filter(entry => entry.count > 0);
+
+  for (const { label, count } of summary) {
+    logger.log(`  ${chalk.cyan(label)}: ${chalk.bold(count)}`);
   }
 
-  if (preliminaryTestingRequested.length > 0) {
-    logger.log(
-      `${chalk.cyan('Creating split tasks for Preliminary Testing Requested...')}`
-    );
+  if (summary.length === 0) {
+    logger.log(`  ${chalk.green('Nothing to do')}`);
   }
 
   for (const issue of preliminaryTestingRequested) {
@@ -94,12 +96,6 @@ export async function runAuto(options: OptionValues): Promise<void> {
     }
 
     await jira.createTasks(issue.key, [jira.preliminaryTestingTask.value]);
-  }
-
-  if (preliminaryTestingFailed.length > 0) {
-    logger.log(
-      `${chalk.red('Closing Preliminary Testing Task - Testing Failed...')}`
-    );
   }
 
   for (const issue of preliminaryTestingFailed) {
@@ -118,18 +114,12 @@ export async function runAuto(options: OptionValues): Promise<void> {
 
     if (!preliminaryTestingTask || !preliminaryTestingTask.outwardIssue?.key) {
       logger.log(
-        `${chalk.red('Preliminary Testing Task not found')} - ${issue.key}`
+        `  ${chalk.red('Preliminary Testing Task not found')} - ${issue.key}`
       );
       continue;
     }
 
     await jira.closeTask(preliminaryTestingTask.outwardIssue?.key);
-  }
-
-  if (issuesInIntegration.length > 0) {
-    logger.log(
-      `${chalk.cyan('Creating split tasks for Issues in Integration w/o QE Task...')}`
-    );
   }
 
   for (const issue of issuesInIntegration) {
@@ -138,12 +128,6 @@ export async function runAuto(options: OptionValues): Promise<void> {
     }
 
     await jira.createTasks(issue.key, [jira.qeTask.value]);
-  }
-
-  if (issuesInReleasePending.length > 0) {
-    logger.log(
-      `${chalk.cyan('Closing QE tasks - parent issue in Release Pending...')}`
-    );
   }
 
   for (const issue of issuesInReleasePending) {
@@ -159,7 +143,7 @@ export async function runAuto(options: OptionValues): Promise<void> {
     );
 
     if (!qeTask || !qeTask.outwardIssue?.key) {
-      logger.log(`${chalk.red('QE Task not found')} - ${issue.key}`);
+      logger.log(`  ${chalk.red('QE Task not found')} - ${issue.key}`);
       continue;
     }
 
