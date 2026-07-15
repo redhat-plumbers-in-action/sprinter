@@ -512,7 +512,142 @@ describe('runAuto()', () => {
     expect(mocks.createTasks).not.toHaveBeenCalled();
   });
 
-  test('handles "Requested", "Fail", and Integration issues together', async () => {
+  test('closes QE task for issues in Release Pending with an open QE split task', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-8000',
+        fields: {
+          status: { name: 'Release Pending' },
+          issuelinks: [
+            {
+              type: { outward: 'split to' },
+              outwardIssue: {
+                key: 'RHEL-8001',
+                fields: {
+                  summary: '[QE Task]: RHEL-8000',
+                  status: { name: 'In Progress' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.closeTask).toHaveBeenCalledTimes(1);
+    expect(mocks.closeTask).toHaveBeenCalledWith('RHEL-8001');
+  });
+
+  test('does not close QE task for Release Pending issues when it is already Closed', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-8100',
+        fields: {
+          status: { name: 'Release Pending' },
+          issuelinks: [
+            {
+              type: { outward: 'split to' },
+              outwardIssue: {
+                key: 'RHEL-8101',
+                fields: {
+                  summary: '[QE Task]: RHEL-8100',
+                  status: { name: 'Closed' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.closeTask).not.toHaveBeenCalled();
+  });
+
+  test('does not close QE task for Release Pending issues without a QE split task', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-8200',
+        fields: {
+          status: { name: 'Release Pending' },
+          issuelinks: [
+            {
+              type: { outward: 'blocks' },
+              outwardIssue: {
+                key: 'RHEL-8201',
+                fields: {
+                  summary: 'Unrelated task',
+                  status: { name: 'Open' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.closeTask).not.toHaveBeenCalled();
+  });
+
+  test('skips closing QE task for Release Pending issues without a key', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: undefined,
+        fields: {
+          status: { name: 'Release Pending' },
+          issuelinks: [
+            {
+              type: { outward: 'split to' },
+              outwardIssue: {
+                key: 'RHEL-8301',
+                fields: {
+                  summary: '[QE Task]: RHEL-8300',
+                  status: { name: 'In Progress' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.closeTask).not.toHaveBeenCalled();
+  });
+
+  test('skips closing when Release Pending QE split task has no key', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-8400',
+        fields: {
+          status: { name: 'Release Pending' },
+          issuelinks: [
+            {
+              type: { outward: 'split to' },
+              outwardIssue: {
+                fields: {
+                  summary: '[QE Task]: RHEL-8400',
+                  status: { name: 'In Progress' },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.closeTask).not.toHaveBeenCalled();
+  });
+
+  test('handles all issue types together', async () => {
     mocks.getBoardIssues.mockResolvedValue([
       {
         key: 'RHEL-7000',
@@ -548,6 +683,24 @@ describe('runAuto()', () => {
           issuelinks: [],
         },
       },
+      {
+        key: 'RHEL-7300',
+        fields: {
+          status: { name: 'Release Pending' },
+          issuelinks: [
+            {
+              type: { outward: 'split to' },
+              outwardIssue: {
+                key: 'RHEL-7301',
+                fields: {
+                  summary: '[QE Task]: RHEL-7300',
+                  status: { name: 'Open' },
+                },
+              },
+            },
+          ],
+        },
+      },
     ]);
 
     await runAuto(defaultOptions);
@@ -555,7 +708,8 @@ describe('runAuto()', () => {
     expect(mocks.createTasks).toHaveBeenCalledTimes(2);
     expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-7000', ['14478']);
     expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-7200', ['14480']);
-    expect(mocks.closeTask).toHaveBeenCalledTimes(1);
+    expect(mocks.closeTask).toHaveBeenCalledTimes(2);
     expect(mocks.closeTask).toHaveBeenCalledWith('RHEL-7101');
+    expect(mocks.closeTask).toHaveBeenCalledWith('RHEL-7301');
   });
 });

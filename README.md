@@ -87,6 +87,7 @@ The `auto` command automates the management of split tasks based on ticket state
 - **Preliminary Testing Requested**: Scans the board for issues where Preliminary Testing is marked as "Requested" and creates the corresponding split task if one does not already exist (or was previously closed).
 - **Preliminary Testing Failed**: When testing has failed, automatically closes the linked Preliminary Testing split task.
 - **Integration without QE Task**: Finds issues in "Integration" status that lack an open QE Task and creates one automatically.
+- **Release Pending with QE Task**: When an issue moves to "Release Pending" status, automatically closes the linked QE Task if it is still open.
 
 ```md
 $ jira-sprinter auto --help
