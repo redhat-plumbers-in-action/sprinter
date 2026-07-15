@@ -11,7 +11,7 @@ export async function runAuto(options: OptionValues): Promise<void> {
 
   const boardIssues = await jira.getBoardIssues(
     options.board,
-    `project = RHEL and issuetype in (Bug, Story, Vulnerability) and statusCategory != Done`
+    `project = RHEL and issuetype in (Bug, Story, Vulnerability) and status != Closed`
   );
 
   const preliminaryTestingRequested = boardIssues.filter(
@@ -63,6 +63,22 @@ export async function runAuto(options: OptionValues): Promise<void> {
   if (issuesInIntegration.length > 0) {
     logger.log(
       `${chalk.yellow('Issues in Integration w/o QE Task')} - ${issuesInIntegration.length}`
+    );
+  }
+
+  const issuesInReleasePending = boardIssues.filter(
+    issue =>
+      issue.fields?.status.name === 'Release Pending' &&
+      issue.fields?.issuelinks?.some(
+        l =>
+          l.type?.outward === 'split to' &&
+          l.outwardIssue?.fields?.summary.startsWith(jira.qeTask.summary) &&
+          l.outwardIssue?.fields?.status.name !== 'Closed'
+      )
+  );
+  if (issuesInReleasePending.length > 0) {
+    logger.log(
+      `${chalk.yellow('Issues in Release Pending with QE Task')} - ${issuesInReleasePending.length}`
     );
   }
 
@@ -122,6 +138,32 @@ export async function runAuto(options: OptionValues): Promise<void> {
     }
 
     await jira.createTasks(issue.key, [jira.qeTask.value]);
+  }
+
+  if (issuesInReleasePending.length > 0) {
+    logger.log(
+      `${chalk.cyan('Closing QE tasks - parent issue in Release Pending...')}`
+    );
+  }
+
+  for (const issue of issuesInReleasePending) {
+    if (!issue.key) {
+      continue;
+    }
+
+    const qeTask = issue.fields?.issuelinks?.find(
+      l =>
+        l.type?.outward === 'split to' &&
+        l.outwardIssue?.fields?.summary.startsWith(jira.qeTask.summary) &&
+        l.outwardIssue?.fields?.status.name !== 'Closed'
+    );
+
+    if (!qeTask || !qeTask.outwardIssue?.key) {
+      logger.log(`${chalk.red('QE Task not found')} - ${issue.key}`);
+      continue;
+    }
+
+    await jira.closeTask(qeTask.outwardIssue?.key);
   }
 
   process.exit(0);
