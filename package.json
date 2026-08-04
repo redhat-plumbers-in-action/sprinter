@@ -9,7 +9,7 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "esbuild ./src/main.js --bundle --outdir=dist --platform=node --target=node20.0.0 --packages=bundle",
+    "build": "esbuild ./src/main.js --bundle --outdir=dist --platform=node --target=node20.0.0 --packages=bundle --external:kerberos",
     "format": "prettier --write '**/*.ts'",
     "format-check": "prettier --check '**/*.ts'",
     "test": "vitest run --coverage",
@@ -41,6 +41,8 @@
     "commander": "15.0.0",
     "dotenv": "17.4.2",
     "jira.js": "5.4.0",
+    "kerberos": "^7.0.0",
+    "product-pages": "^1.0.0",
     "zod": "4.4.3"
   },
   "devDependencies": {

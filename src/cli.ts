@@ -7,6 +7,7 @@ import { Jira } from './jira';
 import { Logger } from './logger';
 import { getDefaultValue, getOptions } from './util';
 import { runAuto } from './auto';
+import { runPpSync } from './pp-sync';
 
 import { SearchResults } from 'jira.js/dist/esm/types/agile/models';
 import {
@@ -42,8 +43,33 @@ export function cli(): Command {
         'Jira Components',
         getDefaultValue('COMPONENTS')
       )
+      .option(
+        '--deadlines-file [path]',
+        'Path to deadlines JSON file',
+        getDefaultValue('DEADLINES_FILE')
+      )
       .action(async (_opts, command) => {
         await runAuto(command.optsWithGlobals());
+      })
+  );
+
+  program.addCommand(
+    new Command('pp-sync')
+      .description(
+        'Fetch REL_PREP and ITM 26 deadlines from Product Pages and save to a local file'
+      )
+      .argument(
+        '<releases...>',
+        'Release shortnames (e.g. rhel-9.9 rhel-9.8.z)'
+      )
+      .option('-x, --dry', 'dry run', getDefaultValue('DRY'))
+      .option(
+        '--deadlines-file [path]',
+        'Path to deadlines JSON file',
+        getDefaultValue('DEADLINES_FILE')
+      )
+      .action(async (releases: string[], _opts, command) => {
+        await runPpSync(releases, command.optsWithGlobals());
       })
   );
 

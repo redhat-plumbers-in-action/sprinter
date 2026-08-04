@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => {
   return {
     os: {
       userInfo: vi.fn(),
+      homedir: vi.fn().mockReturnValue('/mock/home'),
     },
   };
 });
@@ -55,18 +56,23 @@ describe('CLI functions', () => {
       🏃 Small CLI tool to manage sprints in JIRA Board
 
       Options:
-        -V, --version              output the version number
-        -b, --board [board]        Jira Board ID
-        -a, --assignee [assignee]  Jira Assignee (default: "username@redhat.com")
-        -y, --yolo                 YOLO mode, dangerously skip all questions, apply
-                                   default values (use with caution!) (default: false)
-        -n, --nocolor              Disable color output (default: false)
-        -x, --dry                  dry run
-        -h, --help                 display help for command
+        -V, --version                    output the version number
+        -b, --board [board]              Jira Board ID
+        -a, --assignee [assignee]        Jira Assignee (default:
+                                         "username@redhat.com")
+        -y, --yolo                       YOLO mode, dangerously skip all questions,
+                                         apply default values (use with caution!)
+                                         (default: false)
+        -n, --nocolor                    Disable color output (default: false)
+        -x, --dry                        dry run
+        -h, --help                       display help for command
 
       Commands:
-        auto [options]             Automatically manages split tasks (Preliminary
-                                   Testing and QE) based on ticket state and status
+        auto [options]                   Automatically manages split tasks
+                                         (Preliminary Testing and QE) based on ticket
+                                         state and status
+        pp-sync [options] <releases...>  Fetch REL_PREP and ITM 26 deadlines from
+                                         Product Pages and save to a local file
       "
     `);
   });
@@ -93,6 +99,7 @@ describe('CLI functions', () => {
         -b, --board [board]            Jira Board ID
         -t, --team [assigned team]     Jira Assigned Team
         -c, --components [components]  Jira Components
+        --deadlines-file [path]        Path to deadlines JSON file
         -h, --help                     display help for command
       "
     `);

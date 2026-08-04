@@ -22,7 +22,14 @@ export function isDefaultValuesDisabled(): boolean {
 
 export function getDefaultValue(
   envName:
-    'ASSIGNEE' | 'BOARD' | 'TEAM' | 'COMPONENTS' | 'NOCOLOR' | 'DRY' | 'YOLO'
+    | 'ASSIGNEE'
+    | 'BOARD'
+    | 'TEAM'
+    | 'COMPONENTS'
+    | 'NOCOLOR'
+    | 'DRY'
+    | 'YOLO'
+    | 'DEADLINES_FILE'
 ) {
   if (isDefaultValuesDisabled()) {
     return undefined;
