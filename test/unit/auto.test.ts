@@ -7,7 +7,13 @@ const mocks = vi.hoisted(() => {
     getBoardIssues: vi.fn(),
     createTasks: vi.fn(),
     closeTask: vi.fn(),
+    setDueDate: vi.fn(),
+    getlinkedTasks: vi.fn(),
     processExit: vi.fn(),
+    whoami: vi.fn(),
+    printWhoami: vi.fn(),
+    getScheduleTasks: vi.fn(),
+    readDeadlines: vi.fn(),
   };
 });
 
@@ -33,8 +39,32 @@ vi.mock('../../src/jira', () => {
         getBoardIssues: mocks.getBoardIssues,
         createTasks: mocks.createTasks,
         closeTask: mocks.closeTask,
+        setDueDate: mocks.setDueDate,
+        getlinkedTasks: mocks.getlinkedTasks,
       }),
     },
+  };
+});
+
+vi.mock('../../src/product-pages', () => {
+  return {
+    ProductPages: {
+      getInstance: vi.fn().mockReturnValue({
+        whoami: mocks.whoami,
+        printWhoami: mocks.printWhoami,
+        getScheduleTasks: mocks.getScheduleTasks,
+      }),
+    },
+  };
+});
+
+vi.mock('../../src/schema/deadlines', async importOriginal => {
+  const actual =
+    await importOriginal<typeof import('../../src/schema/deadlines')>();
+  return {
+    ...actual,
+    DEFAULT_DEADLINES_PATH: '/mock/deadlines.json',
+    readDeadlines: mocks.readDeadlines,
   };
 });
 
@@ -44,9 +74,16 @@ describe('runAuto()', () => {
     mocks.getBoardIssues.mockResolvedValue([]);
     mocks.createTasks.mockResolvedValue(undefined);
     mocks.closeTask.mockResolvedValue(undefined);
+    mocks.setDueDate.mockResolvedValue(undefined);
+    mocks.getlinkedTasks.mockResolvedValue([]);
+    mocks.whoami.mockResolvedValue({ username: 'testuser' });
+    mocks.printWhoami.mockReturnValue(undefined);
+    mocks.getScheduleTasks.mockResolvedValue([]);
+    mocks.readDeadlines.mockReturnValue(null);
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.clearAllMocks();
   });
@@ -711,5 +748,272 @@ describe('runAuto()', () => {
     expect(mocks.closeTask).toHaveBeenCalledTimes(2);
     expect(mocks.closeTask).toHaveBeenCalledWith('RHEL-7101');
     expect(mocks.closeTask).toHaveBeenCalledWith('RHEL-7301');
+  });
+
+  test('sets due date on preliminary testing split task for z-stream release', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2099-07-15'));
+
+    mocks.getScheduleTasks.mockResolvedValue([
+      {
+        id: 1,
+        name: 'Package Advisory REL_PREP Deadline',
+        path: [],
+        date_start: '2099-07-20',
+        date_finish: '2099-07-20',
+        release_shortname: 'rhel-9.8.z',
+      },
+    ]);
+
+    mocks.getlinkedTasks.mockResolvedValue([
+      {
+        key: 'RHEL-9001',
+        fields: {
+          summary: '[Preliminary Testing Task]: RHEL-9000',
+          status: { name: 'New' },
+        },
+      },
+    ]);
+
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-9000',
+        fields: {
+          status: { name: 'New' },
+          customfield_10879: { value: 'Requested' },
+          fixVersions: [{ name: 'rhel-9.8.z' }],
+          issuelinks: [],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-9000', ['14478']);
+    expect(mocks.getlinkedTasks).toHaveBeenCalledWith('RHEL-9000', [
+      'Preliminary Testing Task',
+    ]);
+    expect(mocks.setDueDate).toHaveBeenCalledWith('RHEL-9001', '2099-07-20');
+
+    vi.useRealTimers();
+  });
+
+  test('sets due date on QE split task for z-stream release using closest REL_PREP', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2099-07-15'));
+
+    mocks.getScheduleTasks.mockResolvedValue([
+      {
+        id: 1,
+        name: 'Package Advisory REL_PREP Deadline',
+        path: [],
+        date_start: '2099-08-01',
+        date_finish: '2099-08-01',
+        release_shortname: 'rhel-9.8.z',
+      },
+    ]);
+
+    mocks.getlinkedTasks.mockResolvedValue([
+      {
+        key: 'RHEL-9101',
+        fields: {
+          summary: '[QE Task]: RHEL-9100',
+          status: { name: 'New' },
+        },
+      },
+    ]);
+
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-9100',
+        fields: {
+          status: { name: 'Integration' },
+          fixVersions: [{ name: 'rhel-9.8.z' }],
+          issuelinks: [],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-9100', ['14480']);
+    expect(mocks.getlinkedTasks).toHaveBeenCalledWith('RHEL-9100', ['QE Task']);
+    expect(mocks.setDueDate).toHaveBeenCalledWith('RHEL-9101', '2099-08-01');
+
+    vi.useRealTimers();
+  });
+
+  test('sets due date on preliminary testing split task for minor release using ITM_26', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2099-07-15'));
+
+    mocks.getScheduleTasks.mockResolvedValue([
+      {
+        id: 1,
+        name: 'ITM 26 DevTestDoc',
+        path: [],
+        date_start: '2099-07-20',
+        date_finish: '2099-07-20',
+        release_shortname: 'rhel-10.0',
+      },
+    ]);
+
+    mocks.getlinkedTasks.mockResolvedValue([
+      {
+        key: 'RHEL-9201',
+        fields: {
+          summary: '[Preliminary Testing Task]: RHEL-9200',
+          status: { name: 'New' },
+        },
+      },
+    ]);
+
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-9200',
+        fields: {
+          status: { name: 'New' },
+          customfield_10879: { value: 'Requested' },
+          fixVersions: [{ name: 'rhel-10.0' }],
+          issuelinks: [],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-9200', ['14478']);
+    expect(mocks.setDueDate).toHaveBeenCalledWith('RHEL-9201', '2099-07-20');
+
+    vi.useRealTimers();
+  });
+
+  test('does not set due date when no fixVersions on issue', async () => {
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-9300',
+        fields: {
+          status: { name: 'New' },
+          customfield_10879: { value: 'Requested' },
+          issuelinks: [],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-9300', ['14478']);
+    expect(mocks.setDueDate).not.toHaveBeenCalled();
+  });
+
+  test('does not set due date when release has no deadlines data', async () => {
+    mocks.whoami.mockRejectedValue(new Error('Kerberos unavailable'));
+    mocks.readDeadlines.mockReturnValue(null);
+
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-9400',
+        fields: {
+          status: { name: 'New' },
+          customfield_10879: { value: 'Requested' },
+          fixVersions: [{ name: 'rhel-9.8.z' }],
+          issuelinks: [],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-9400', ['14478']);
+    expect(mocks.setDueDate).not.toHaveBeenCalled();
+  });
+
+  test('falls back to cached deadlines when PP is unavailable', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2099-07-15'));
+
+    mocks.whoami.mockRejectedValue(new Error('Kerberos unavailable'));
+    mocks.readDeadlines.mockReturnValue({
+      updated_at: '2099-07-01T00:00:00.000Z',
+      releases: {
+        'rhel-9.8.z': {
+          rel_prep: [{ name: 'REL_PREP', date_finish: '2099-07-20' }],
+          itm_26: null,
+        },
+      },
+    });
+
+    mocks.getlinkedTasks.mockResolvedValue([
+      {
+        key: 'RHEL-9501',
+        fields: {
+          summary: '[Preliminary Testing Task]: RHEL-9500',
+          status: { name: 'New' },
+        },
+      },
+    ]);
+
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-9500',
+        fields: {
+          status: { name: 'New' },
+          customfield_10879: { value: 'Requested' },
+          fixVersions: [{ name: 'rhel-9.8.z' }],
+          issuelinks: [],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-9500', ['14478']);
+    expect(mocks.setDueDate).toHaveBeenCalledWith('RHEL-9501', '2099-07-20');
+
+    vi.useRealTimers();
+  });
+
+  test('sets 2-week due date on split task when REL_PREP is far away', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2099-07-15'));
+
+    mocks.getScheduleTasks.mockResolvedValue([
+      {
+        id: 1,
+        name: 'Package Advisory REL_PREP Deadline',
+        path: [],
+        date_start: '2099-09-01',
+        date_finish: '2099-09-01',
+        release_shortname: 'rhel-9.8.z',
+      },
+    ]);
+
+    mocks.getlinkedTasks.mockResolvedValue([
+      {
+        key: 'RHEL-9601',
+        fields: {
+          summary: '[Preliminary Testing Task]: RHEL-9600',
+          status: { name: 'New' },
+        },
+      },
+    ]);
+
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-9600',
+        fields: {
+          status: { name: 'New' },
+          customfield_10879: { value: 'Requested' },
+          fixVersions: [{ name: 'rhel-9.8.z' }],
+          issuelinks: [],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.setDueDate).toHaveBeenCalledWith('RHEL-9601', '2099-07-29');
+
+    vi.useRealTimers();
   });
 });

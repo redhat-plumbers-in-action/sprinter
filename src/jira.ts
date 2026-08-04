@@ -180,6 +180,7 @@ export class Jira {
         'assignee',
         'priority',
         'components',
+        'fixVersions',
         this.fields.storyPoints,
         this.fields.severity,
         this.fields.preliminaryTesting,
@@ -199,26 +200,12 @@ export class Jira {
       this.logger.log(
         `  ${chalk.dim(`Fetching linked tasks for ${issue} (dry-run)`)}`
       );
-      return [
-        {
-          key: 'RHEL-1234',
-          fields: {
-            summary: '[DEV Task] Test Task',
-          },
+      return expectedTasks.map((name, i) => ({
+        key: `${issue}-SPLIT-${i + 1}`,
+        fields: {
+          summary: `[${name}]: ${issue} (dry-run)`,
         },
-        {
-          key: 'RHEL-1235',
-          fields: {
-            summary: '[QE Task] Test Task',
-          },
-        },
-        {
-          key: 'RHEL-1236',
-          fields: {
-            summary: '[Upstream] Test Task',
-          },
-        },
-      ] as unknown as Issue[];
+      })) as unknown as Issue[];
     }
 
     const response =
@@ -297,6 +284,23 @@ export class Jira {
     await this.api.issues.editIssue({
       issueIdOrKey: issue,
       fields: { ...assigneeValue, ...storyPointsValue, ...sprintValue },
+    });
+  }
+
+  async setDueDate(issue: string, dueDate: string) {
+    if (this.dry) {
+      this.logger.log(
+        `  ${chalk.dim(`Setting due date ${dueDate} on ${issue} (dry-run)`)}`
+      );
+      return;
+    }
+
+    this.logger.log(
+      `  ${chalk.cyan(`Setting due date ${dueDate} on ${issue}`)}`
+    );
+    await this.api.issues.editIssue({
+      issueIdOrKey: issue,
+      fields: { duedate: dueDate },
     });
   }
 

@@ -3,9 +3,20 @@ import { OptionValues } from 'commander';
 
 import { Logger } from './logger';
 import { Jira } from './jira';
+import { ProductPages } from './product-pages';
+import {
+  readDeadlines,
+  DEFAULT_DEADLINES_PATH,
+  computePreliminaryTestingDueDate,
+  computeQeTaskDueDate,
+  classifyScheduleTasks,
+  SCHEDULE_TASK_REGEX,
+  type ReleaseDeadlines,
+} from './schema/deadlines';
 
 export async function runAuto(options: OptionValues): Promise<void> {
   const logger = new Logger(!!options.nocolor);
+  const deadlinesFile: string = options.deadlinesFile ?? DEFAULT_DEADLINES_PATH;
 
   const jira = await Jira.getInstance(options.dry, logger, options.assignee);
 
@@ -16,6 +27,14 @@ export async function runAuto(options: OptionValues): Promise<void> {
   const boardIssues = await jira.getBoardIssues(
     options.board,
     `project = RHEL and issuetype in (Bug, Story, Vulnerability) and status != Closed`
+  );
+
+  const uniqueReleases = extractUniqueReleases(boardIssues);
+  const deadlinesDb = await loadDeadlines(
+    uniqueReleases,
+    deadlinesFile,
+    !!options.dry,
+    logger
   );
 
   const preliminaryTestingRequested = boardIssues.filter(
@@ -90,12 +109,30 @@ export async function runAuto(options: OptionValues): Promise<void> {
     logger.log(`  ${chalk.green('Nothing to do')}`);
   }
 
+  type DueDateJob = {
+    parentKey: string;
+    taskName: string;
+    summaryPrefix: string;
+    dueDate: string;
+  };
+  const dueDateJobs: DueDateJob[] = [];
+
   for (const issue of preliminaryTestingRequested) {
     if (!issue.key) {
       continue;
     }
 
     await jira.createTasks(issue.key, [jira.preliminaryTestingTask.value]);
+
+    const dueDate = resolveDueDate(issue, 'preliminary', deadlinesDb, logger);
+    if (dueDate) {
+      dueDateJobs.push({
+        parentKey: issue.key,
+        taskName: jira.preliminaryTestingTask.name,
+        summaryPrefix: jira.preliminaryTestingTask.summary,
+        dueDate,
+      });
+    }
   }
 
   for (const issue of preliminaryTestingFailed) {
@@ -128,6 +165,16 @@ export async function runAuto(options: OptionValues): Promise<void> {
     }
 
     await jira.createTasks(issue.key, [jira.qeTask.value]);
+
+    const dueDate = resolveDueDate(issue, 'qe', deadlinesDb, logger);
+    if (dueDate) {
+      dueDateJobs.push({
+        parentKey: issue.key,
+        taskName: jira.qeTask.name,
+        summaryPrefix: jira.qeTask.summary,
+        dueDate,
+      });
+    }
   }
 
   for (const issue of issuesInReleasePending) {
@@ -150,5 +197,146 @@ export async function runAuto(options: OptionValues): Promise<void> {
     await jira.closeTask(qeTask.outwardIssue?.key);
   }
 
+  const dueDateResults = await Promise.allSettled(
+    dueDateJobs.map(job =>
+      setDueDateOnSplitTask(
+        jira,
+        job.parentKey,
+        job.taskName,
+        job.summaryPrefix,
+        job.dueDate,
+        logger
+      )
+    )
+  );
+  for (const result of dueDateResults) {
+    if (result.status === 'rejected') {
+      logger.log(chalk.yellow(`  Due date operation failed: ${result.reason}`));
+    }
+  }
+
   process.exit(0);
+}
+
+function extractUniqueReleases(
+  issues: { fields?: Record<string, any> }[]
+): string[] {
+  const releases = new Set<string>();
+  for (const issue of issues) {
+    const fixVersions = issue.fields?.fixVersions;
+    if (Array.isArray(fixVersions)) {
+      for (const v of fixVersions as { name?: string }[]) {
+        if (v?.name) releases.add(v.name);
+      }
+    }
+  }
+  return [...releases];
+}
+
+async function loadDeadlines(
+  releases: string[],
+  deadlinesFile: string,
+  dry: boolean,
+  logger: Logger
+): Promise<Record<string, ReleaseDeadlines>> {
+  const pp = ProductPages.getInstance(dry, logger);
+
+  // If authentication fails, fall back to the entire cached file.
+  try {
+    const whoami = await pp.whoami();
+    logger.log(chalk.dim(`Authenticated as: ${whoami.username}`));
+  } catch {
+    logger.log(
+      chalk.yellow('Product Pages unavailable, using cached deadlines')
+    );
+    const cached = readDeadlines(deadlinesFile);
+    if (!cached) {
+      logger.log(chalk.red(`No cached deadlines found at ${deadlinesFile}`));
+      return {};
+    }
+    logger.log(chalk.dim(`Using cached data from ${cached.updated_at}`));
+    return cached.releases;
+  }
+
+  // Fetch per-release — skip individual failures so a single bad release
+  // does not discard fresh data already retrieved for other releases.
+  const result: Record<string, ReleaseDeadlines> = {};
+  for (const release of releases) {
+    try {
+      const tasks = await pp.getScheduleTasks(release, {
+        name__regex: SCHEDULE_TASK_REGEX,
+      });
+      result[release] = classifyScheduleTasks(tasks);
+    } catch {
+      logger.log(
+        chalk.yellow(`  Could not fetch deadlines for ${release}, skipping`)
+      );
+    }
+  }
+  return result;
+}
+
+async function setDueDateOnSplitTask(
+  jira: Jira,
+  parentKey: string,
+  taskName: string,
+  summaryPrefix: string,
+  dueDate: string,
+  logger: Logger
+): Promise<void> {
+  for (let attempt = 1; attempt <= 10; attempt++) {
+    const tasks = await jira.getlinkedTasks(parentKey, [taskName]);
+    const splitTask = tasks.find(t =>
+      t.fields?.summary?.startsWith(summaryPrefix)
+    );
+
+    if (splitTask?.key) {
+      await jira.setDueDate(splitTask.key, dueDate);
+      return;
+    }
+
+    if (attempt < 10) {
+      logger.log(chalk.dim(`  Waiting for ${taskName} on ${parentKey}...`));
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
+
+  logger.log(
+    chalk.yellow(
+      `  ${taskName} not found for ${parentKey} — could not set due date`
+    )
+  );
+}
+
+function resolveDueDate(
+  issue: { key?: string; fields?: Record<string, any> },
+  taskType: 'preliminary' | 'qe',
+  deadlinesDb: Record<string, ReleaseDeadlines>,
+  logger: Logger
+): string | null {
+  const fixVersion = issue.fields?.fixVersions?.[0]?.name;
+  if (!fixVersion) {
+    logger.log(
+      chalk.dim(`  No fixVersion on ${issue.key} — skipping due date`)
+    );
+    return null;
+  }
+
+  const deadlines = deadlinesDb[fixVersion];
+  if (!deadlines) {
+    logger.log(
+      chalk.dim(
+        `  No deadlines for ${fixVersion} — skipping due date on ${issue.key}`
+      )
+    );
+    return null;
+  }
+
+  const isZStream = fixVersion.endsWith('.z');
+
+  if (taskType === 'preliminary') {
+    return computePreliminaryTestingDueDate(deadlines, isZStream);
+  }
+
+  return computeQeTaskDueDate(deadlines, isZStream);
 }
