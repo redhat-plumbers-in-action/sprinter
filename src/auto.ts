@@ -295,9 +295,9 @@ async function setDueDateOnSplitTask(
       return;
     }
 
-    if (attempt < 10) {
+    if (attempt < 15) {
       logger.log(chalk.dim(`  Waiting for ${taskName} on ${parentKey}...`));
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise(resolve => setTimeout(resolve, 10000));
     }
   }
 
