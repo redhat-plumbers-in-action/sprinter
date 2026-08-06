@@ -19,13 +19,15 @@ import {
 } from './schema/jira';
 import { Issue } from 'jira.js/dist/esm/types/version3/models/issue';
 
+import { version } from '../package.json';
+
 export function cli(): Command {
   const program = new Command();
 
   program
     .name('jira-sprinter')
     .description('🏃 Small CLI tool to manage sprints in JIRA Board')
-    .version('2.4.0');
+    .version(version);
 
   program.addCommand(
     new Command('auto')
