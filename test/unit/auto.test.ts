@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { runAuto } from '../../src/auto';
@@ -5,6 +6,8 @@ import { runAuto } from '../../src/auto';
 const mocks = vi.hoisted(() => {
   return {
     getBoardIssues: vi.fn(),
+    getActiveSprint: vi.fn(),
+    addToSprint: vi.fn(),
     createTasks: vi.fn(),
     closeTask: vi.fn(),
     setDueDate: vi.fn(),
@@ -37,6 +40,8 @@ vi.mock('../../src/jira', () => {
           value: '14480',
         },
         getBoardIssues: mocks.getBoardIssues,
+        getActiveSprint: mocks.getActiveSprint,
+        addToSprint: mocks.addToSprint,
         createTasks: mocks.createTasks,
         closeTask: mocks.closeTask,
         setDueDate: mocks.setDueDate,
@@ -72,6 +77,8 @@ describe('runAuto()', () => {
   beforeEach(() => {
     vi.spyOn(process, 'exit').mockImplementation(mocks.processExit as never);
     mocks.getBoardIssues.mockResolvedValue([]);
+    mocks.getActiveSprint.mockResolvedValue(undefined);
+    mocks.addToSprint.mockResolvedValue(undefined);
     mocks.createTasks.mockResolvedValue(undefined);
     mocks.closeTask.mockResolvedValue(undefined);
     mocks.setDueDate.mockResolvedValue(undefined);
@@ -90,6 +97,7 @@ describe('runAuto()', () => {
 
   const defaultOptions = {
     board: 123,
+    team: 'team-foo',
     dry: false,
     nocolor: true,
     assignee: 'user@redhat.com',
@@ -1015,5 +1023,88 @@ describe('runAuto()', () => {
     expect(mocks.setDueDate).toHaveBeenCalledWith('RHEL-9601', '2099-07-29');
 
     vi.useRealTimers();
+  });
+
+  describe('sprint assignment', () => {
+    test('adds in-progress tasks without sprint to the active sprint', async () => {
+      mocks.getActiveSprint.mockResolvedValue({
+        id: 42,
+        state: 'active',
+        name: 'Sprint 10',
+      });
+      mocks.getBoardIssues.mockResolvedValueOnce([]).mockResolvedValueOnce([
+        { key: 'RHEL-10000', fields: { status: { name: 'In Progress' } } },
+        { key: 'RHEL-10001', fields: { status: { name: 'In Progress' } } },
+      ]);
+
+      await runAuto(defaultOptions);
+
+      expect(mocks.getBoardIssues).toHaveBeenCalledTimes(2);
+      expect(mocks.getBoardIssues).toHaveBeenNthCalledWith(
+        2,
+        123,
+        expect.stringContaining('"AssignedTeam[Dropdown]" = "team-foo"')
+      );
+      expect(mocks.addToSprint).toHaveBeenCalledTimes(2);
+      expect(mocks.addToSprint).toHaveBeenCalledWith('RHEL-10000', 42);
+      expect(mocks.addToSprint).toHaveBeenCalledWith('RHEL-10001', 42);
+    });
+
+    test('skips sprint assignment when no active sprint is found', async () => {
+      mocks.getActiveSprint.mockResolvedValue(undefined);
+      mocks.getBoardIssues.mockResolvedValue([]);
+
+      await runAuto(defaultOptions);
+
+      expect(mocks.addToSprint).not.toHaveBeenCalled();
+      expect(mocks.getBoardIssues).toHaveBeenCalledTimes(1);
+    });
+
+    test('skips tasks without a key during sprint assignment', async () => {
+      mocks.getActiveSprint.mockResolvedValue({
+        id: 42,
+        state: 'active',
+        name: 'Sprint 10',
+      });
+      mocks.getBoardIssues.mockResolvedValueOnce([]).mockResolvedValueOnce([
+        { key: undefined, fields: { status: { name: 'In Progress' } } },
+        { key: 'RHEL-10100', fields: { status: { name: 'In Progress' } } },
+      ]);
+
+      await runAuto(defaultOptions);
+
+      expect(mocks.addToSprint).toHaveBeenCalledTimes(1);
+      expect(mocks.addToSprint).toHaveBeenCalledWith('RHEL-10100', 42);
+    });
+
+    test('does nothing when no tasks match the sprint assignment JQL', async () => {
+      mocks.getActiveSprint.mockResolvedValue({
+        id: 42,
+        state: 'active',
+        name: 'Sprint 10',
+      });
+      mocks.getBoardIssues.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+      await runAuto(defaultOptions);
+
+      expect(mocks.addToSprint).not.toHaveBeenCalled();
+    });
+
+    test('uses the team option in the sprint assignment JQL', async () => {
+      mocks.getActiveSprint.mockResolvedValue({
+        id: 99,
+        state: 'active',
+        name: 'Sprint 5',
+      });
+      mocks.getBoardIssues.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+      await runAuto({ ...defaultOptions, team: 'team-bar' });
+
+      expect(mocks.getBoardIssues).toHaveBeenNthCalledWith(
+        2,
+        123,
+        expect.stringContaining('"AssignedTeam[Dropdown]" = "team-bar"')
+      );
+    });
   });
 });

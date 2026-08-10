@@ -244,4 +244,64 @@ describe('Jira functions', () => {
       expect(mocks.doTransition).not.toHaveBeenCalled();
     });
   });
+
+  describe('getActiveSprint()', () => {
+    test('returns the active sprint from the board', async () => {
+      mocks.getAllSprints.mockResolvedValue({
+        values: [
+          { id: 1, name: 'Sprint 1', state: 'active' },
+          { id: 2, name: 'Sprint 2', state: 'future' },
+        ],
+      });
+
+      const result = await jira.getActiveSprint(100);
+
+      expect(result).toEqual({ id: 1, name: 'Sprint 1', state: 'active' });
+      expect(mocks.getAllSprints).toHaveBeenCalledWith({
+        boardId: 100,
+        state: 'active,future',
+      });
+    });
+
+    test('returns undefined when no active sprint exists', async () => {
+      mocks.getAllSprints.mockResolvedValue({
+        values: [
+          { id: 2, name: 'Sprint 2', state: 'future' },
+          { id: 3, name: 'Sprint 3', state: 'future' },
+        ],
+      });
+
+      const result = await jira.getActiveSprint(100);
+
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('addToSprint()', () => {
+    test('calls setValues with the sprint id', async () => {
+      await jira.addToSprint('RHEL-6000', 42);
+
+      expect(mocks.editIssue).toHaveBeenCalledWith({
+        issueIdOrKey: 'RHEL-6000',
+        fields: {
+          [jira.fields.sprint]: 42,
+        },
+      });
+    });
+
+    test('in dry mode, does not call editIssue', async () => {
+      const dryJira = new Jira(
+        'https://redhat.atlassian.net',
+        'token',
+        true,
+        new Logger(false),
+        'username'
+      );
+      mocks.editIssue.mockClear();
+
+      await dryJira.addToSprint('RHEL-6001', 42);
+
+      expect(mocks.editIssue).not.toHaveBeenCalled();
+    });
+  });
 });

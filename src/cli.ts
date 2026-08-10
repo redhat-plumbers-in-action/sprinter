@@ -9,7 +9,7 @@ import { getDefaultValue, getOptions } from './util';
 import { runAuto } from './auto';
 import { runPpSync } from './pp-sync';
 
-import { SearchResults } from 'jira.js/dist/esm/types/agile/models';
+import { SearchResults } from 'jira.js/agile/models';
 import {
   colorTaskSchema,
   issueStatusSchema,
@@ -17,7 +17,7 @@ import {
   colorSizeSchema,
   Size,
 } from './schema/jira';
-import { Issue } from 'jira.js/dist/esm/types/version3/models/issue';
+import { Issue } from 'jira.js/version3/models';
 
 import { version } from '../package.json';
 

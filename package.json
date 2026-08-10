@@ -42,13 +42,13 @@
     "dotenv": "17.4.2",
     "jira.js": "5.4.0",
     "kerberos": "^7.0.0",
-    "product-pages": "^1.0.0",
+    "product-pages": "^1.0.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@types/node": "26.1.2",
+    "@types/node": "26.2.0",
     "@vitest/coverage-v8": "4.1.10",
-    "esbuild": "0.28.1",
+    "esbuild": "0.28.2",
     "prettier": "3.9.6",
     "ts-node": "10.9.2",
     "typescript": "7.0.2",

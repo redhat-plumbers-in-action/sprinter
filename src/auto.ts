@@ -85,6 +85,22 @@ export async function runAuto(options: OptionValues): Promise<void> {
       )
   );
 
+  const activeSprint = await jira.getActiveSprint(+options.board);
+  let tasksWithoutSprint: { key?: string; fields?: Record<string, any> }[] = [];
+
+  if (!activeSprint) {
+    logger.log(
+      `  ${chalk.yellow('No active sprint found — skipping sprint assignment')}`
+    );
+  } else {
+    const sprintAssignmentJQL = `project in (RHEL, "RHEL Miscellaneous") AND labels in (NEWA, dev_task, qe_task, upstream_task, root_cause_analysis_task, preliminary_testing_task, integration_testing_task) AND "Flagged[Checkboxes]" = EMPTY AND Sprint is EMPTY AND "AssignedTeam[Dropdown]" = "${options.team}" AND statusCategory = "In Progress" AND type = Task`;
+
+    tasksWithoutSprint = await jira.getBoardIssues(
+      +options.board,
+      sprintAssignmentJQL
+    );
+  }
+
   const summary = [
     {
       label: 'Preliminary Testing Requested',
@@ -99,6 +115,7 @@ export async function runAuto(options: OptionValues): Promise<void> {
       label: 'Release Pending w/ QE Task',
       count: issuesInReleasePending.length,
     },
+    { label: 'In Progress w/o Sprint', count: tasksWithoutSprint.length },
   ].filter(entry => entry.count > 0);
 
   for (const { label, count } of summary) {
@@ -195,6 +212,16 @@ export async function runAuto(options: OptionValues): Promise<void> {
     }
 
     await jira.closeTask(qeTask.outwardIssue?.key);
+  }
+
+  if (activeSprint) {
+    for (const task of tasksWithoutSprint) {
+      if (!task.key) {
+        continue;
+      }
+
+      await jira.addToSprint(task.key, activeSprint.id);
+    }
   }
 
   const dueDateResults = await Promise.allSettled(
