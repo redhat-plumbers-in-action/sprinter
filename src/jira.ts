@@ -1,6 +1,6 @@
 import { AgileClient, Version3Client } from 'jira.js';
-import { SearchResults, Sprint } from 'jira.js/dist/esm/types/agile/models';
-import { Issue } from 'jira.js/dist/esm/types/version3/models/issue';
+import { SearchResults, Sprint } from 'jira.js/agile/models';
+import { Issue } from 'jira.js/version3/models';
 
 import chalk from 'chalk';
 
@@ -109,6 +109,11 @@ export class Jira {
     });
 
     return response.values;
+  }
+
+  async getActiveSprint(boardId: number): Promise<Sprint | undefined> {
+    const sprints = await this.getSprints(boardId);
+    return sprints.find(s => s.state === 'active');
   }
 
   async getIssuesInSprint(
@@ -285,6 +290,18 @@ export class Jira {
       issueIdOrKey: issue,
       fields: { ...assigneeValue, ...storyPointsValue, ...sprintValue },
     });
+  }
+
+  async addToSprint(issue: string, sprintId: number): Promise<void> {
+    if (this.dry) {
+      this.logger.log(
+        `  ${chalk.dim(`Adding ${issue} to sprint ${sprintId} (dry-run)`)}`
+      );
+      return;
+    }
+
+    this.logger.log(`  ${chalk.cyan(`Adding ${issue} to sprint ${sprintId}`)}`);
+    await this.setValues(issue, { sprint: sprintId });
   }
 
   async setDueDate(issue: string, dueDate: string) {
