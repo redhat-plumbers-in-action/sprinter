@@ -59,7 +59,7 @@ export class Jira {
   };
   readonly availableTasks = [
     { ...this.devTask, checked: true },
-    { ...this.qeTask, checked: true },
+    { ...this.qeTask, checked: false },
     { ...this.upstreamTask, checked: false },
     { ...this.rootCauseAnalysisTask, checked: false },
     { ...this.preliminaryTestingTask, checked: false },
