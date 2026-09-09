@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { runPpSync } from '../../src/pp-sync';
+import { SCHEDULE_TASK_REGEX } from '../../src/schema/deadlines';
 
 const mocks = vi.hoisted(() => {
   return {
@@ -64,10 +65,10 @@ describe('runPpSync()', () => {
 
     expect(mocks.getScheduleTasks).toHaveBeenCalledTimes(2);
     expect(mocks.getScheduleTasks).toHaveBeenCalledWith('fake-product-1.0', {
-      name__regex: '.*(Package Advisory REL_PREP Deadline|ITM 26 DevTestDoc).*',
+      name__regex: SCHEDULE_TASK_REGEX,
     });
     expect(mocks.getScheduleTasks).toHaveBeenCalledWith('fake-product-2.0.z', {
-      name__regex: '.*(Package Advisory REL_PREP Deadline|ITM 26 DevTestDoc).*',
+      name__regex: SCHEDULE_TASK_REGEX,
     });
   });
 
@@ -103,6 +104,7 @@ describe('runPpSync()', () => {
         },
       ],
       itm_26: '2099-09-01',
+      all_built_rel_prep: null,
     });
   });
 
@@ -176,6 +178,7 @@ describe('runPpSync()', () => {
         },
       ],
       itm_26: null,
+      all_built_rel_prep: null,
     });
   });
 
@@ -188,6 +191,7 @@ describe('runPpSync()', () => {
     expect(writtenData.releases['fake-product-3.0']).toEqual({
       rel_prep: [],
       itm_26: null,
+      all_built_rel_prep: null,
     });
   });
 
@@ -230,6 +234,7 @@ describe('runPpSync()', () => {
         },
       ],
       itm_26: null,
+      all_built_rel_prep: null,
     });
   });
 
@@ -276,6 +281,7 @@ describe('runPpSync()', () => {
         },
       ],
       itm_26: '2099-09-05',
+      all_built_rel_prep: null,
     });
   });
 
@@ -370,9 +376,18 @@ describe('runPpSync()', () => {
           },
         ],
         itm_26: null,
+        all_built_rel_prep: null,
       },
-      'fake-product-2.0.z': { rel_prep: [], itm_26: '2099-09-01' },
-      'fake-product-3.0': { rel_prep: [], itm_26: null },
+      'fake-product-2.0.z': {
+        rel_prep: [],
+        itm_26: '2099-09-01',
+        all_built_rel_prep: null,
+      },
+      'fake-product-3.0': {
+        rel_prep: [],
+        itm_26: null,
+        all_built_rel_prep: null,
+      },
     });
   });
 
@@ -387,6 +402,7 @@ describe('runPpSync()', () => {
     expect(writtenData.releases['fake-product-1.0']).toEqual({
       rel_prep: [],
       itm_26: null,
+      all_built_rel_prep: null,
     });
   });
 });

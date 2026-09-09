@@ -896,6 +896,58 @@ describe('runAuto()', () => {
     vi.useRealTimers();
   });
 
+  test('sets due date on QE split task for minor release using all_built_rel_prep when past ITM_26', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2099-07-15'));
+
+    mocks.getScheduleTasks.mockResolvedValue([
+      {
+        id: 1,
+        name: 'ITM 26 DevTestDoc',
+        path: [],
+        date_start: '2099-06-01',
+        date_finish: '2099-06-01',
+        release_shortname: 'rhel-10.0',
+      },
+      {
+        id: 2,
+        name: 'All packages built & All Errata in REL_PREP (non-container)',
+        path: [],
+        date_start: '2099-09-01',
+        date_finish: '2099-09-01',
+        release_shortname: 'rhel-10.0',
+      },
+    ]);
+
+    mocks.getlinkedTasks.mockResolvedValue([
+      {
+        key: 'RHEL-9251',
+        fields: {
+          summary: '[QE Task]: RHEL-9250',
+          status: { name: 'New' },
+        },
+      },
+    ]);
+
+    mocks.getBoardIssues.mockResolvedValue([
+      {
+        key: 'RHEL-9250',
+        fields: {
+          status: { name: 'Integration' },
+          fixVersions: [{ name: 'rhel-10.0' }],
+          issuelinks: [],
+        },
+      },
+    ]);
+
+    await runAuto(defaultOptions);
+
+    expect(mocks.createTasks).toHaveBeenCalledWith('RHEL-9250', ['14480']);
+    expect(mocks.setDueDate).toHaveBeenCalledWith('RHEL-9251', '2099-09-01');
+
+    vi.useRealTimers();
+  });
+
   test('does not set due date when no fixVersions on issue', async () => {
     mocks.getBoardIssues.mockResolvedValue([
       {
@@ -947,6 +999,7 @@ describe('runAuto()', () => {
         'rhel-9.8.z': {
           rel_prep: [{ name: 'REL_PREP', date_finish: '2099-07-20' }],
           itm_26: null,
+          all_built_rel_prep: null,
         },
       },
     });

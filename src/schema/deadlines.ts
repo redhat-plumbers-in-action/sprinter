@@ -13,6 +13,7 @@ export type RelPrepEntry = z.infer<typeof relPrepEntrySchema>;
 const releaseDeadlinesSchema = z.object({
   rel_prep: z.array(relPrepEntrySchema),
   itm_26: z.string().nullable(),
+  all_built_rel_prep: z.string().nullable().default(null),
 });
 
 const deadlinesFileSchema = z.object({
@@ -30,8 +31,16 @@ export const DEFAULT_DEADLINES_PATH = path.resolve(
   'deadlines.json'
 );
 
-export const SCHEDULE_TASK_REGEX =
-  '.*(Package Advisory REL_PREP Deadline|ITM 26 DevTestDoc).*';
+const TASK_NAME_REL_PREP = 'Package Advisory REL_PREP Deadline';
+const TASK_NAME_ITM_26 = 'ITM 26 DevTestDoc';
+const TASK_NAME_ALL_BUILT_REL_PREP =
+  'All packages built & All Errata in REL_PREP (non-container)';
+
+export function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export const SCHEDULE_TASK_REGEX = `.*(${escapeRegex(TASK_NAME_REL_PREP)}|${escapeRegex(TASK_NAME_ITM_26)}|${escapeRegex(TASK_NAME_ALL_BUILT_REL_PREP)}).*`;
 
 export function readDeadlines(
   filePath: string = DEFAULT_DEADLINES_PATH
@@ -54,14 +63,20 @@ function formatDate(date: Date): string {
 export function classifyScheduleTasks(
   tasks: { name: string; date_finish: string }[]
 ): ReleaseDeadlines {
-  const deadlines: ReleaseDeadlines = { rel_prep: [], itm_26: null };
+  const deadlines: ReleaseDeadlines = {
+    rel_prep: [],
+    itm_26: null,
+    all_built_rel_prep: null,
+  };
   for (const task of tasks) {
-    if (task.name.includes('REL_PREP')) {
+    if (task.name.includes(TASK_NAME_ALL_BUILT_REL_PREP)) {
+      deadlines.all_built_rel_prep = task.date_finish;
+    } else if (task.name.includes(TASK_NAME_REL_PREP)) {
       deadlines.rel_prep.push({
         name: task.name,
         date_finish: task.date_finish,
       });
-    } else if (task.name.includes('ITM 26')) {
+    } else if (task.name.includes(TASK_NAME_ITM_26)) {
       deadlines.itm_26 = task.date_finish;
     }
   }
@@ -95,14 +110,30 @@ export function computePreliminaryTestingDueDate(
     return closest < twoWeeksStr ? closest : twoWeeksStr;
   }
 
+  const todayStr = formatDate(today);
+
   if (deadlines.itm_26) {
-    const todayStr = formatDate(today);
     if (deadlines.itm_26 >= todayStr && deadlines.itm_26 < twoWeeksStr) {
       return deadlines.itm_26;
     }
   }
 
-  return twoWeeksStr;
+  const pastItm26 = !deadlines.itm_26 || deadlines.itm_26 < todayStr;
+  const oneWeek = new Date(today);
+  oneWeek.setDate(oneWeek.getDate() + 7);
+  const oneWeekStr = formatDate(oneWeek);
+  const maxCap = pastItm26 ? oneWeekStr : twoWeeksStr;
+
+  if (deadlines.all_built_rel_prep) {
+    if (
+      deadlines.all_built_rel_prep >= todayStr &&
+      deadlines.all_built_rel_prep < maxCap
+    ) {
+      return deadlines.all_built_rel_prep;
+    }
+  }
+
+  return maxCap;
 }
 
 export function computeQeTaskDueDate(
@@ -117,8 +148,17 @@ export function computeQeTaskDueDate(
     );
   }
 
-  if (deadlines.itm_26 && deadlines.itm_26 >= formatDate(today)) {
+  const todayStr = formatDate(today);
+
+  if (deadlines.itm_26 && deadlines.itm_26 >= todayStr) {
     return deadlines.itm_26;
+  }
+
+  if (
+    deadlines.all_built_rel_prep &&
+    deadlines.all_built_rel_prep >= todayStr
+  ) {
+    return deadlines.all_built_rel_prep;
   }
 
   return null;
