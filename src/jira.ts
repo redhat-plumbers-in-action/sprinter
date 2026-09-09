@@ -286,6 +286,13 @@ export class Jira {
         ? { [this.fields.sprint]: values.sprint }
         : {};
 
+    if (this.dry) {
+      this.logger.log(
+        `  ${chalk.dim(`Setting values ${JSON.stringify(values)} on ${issue} (dry-run)`)}`
+      );
+      return;
+    }
+
     await this.api.issues.editIssue({
       issueIdOrKey: issue,
       fields: { ...assigneeValue, ...storyPointsValue, ...sprintValue },
