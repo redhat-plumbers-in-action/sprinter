@@ -53,6 +53,10 @@ export async function runPpSync(
         ? chalk.bold(deadlines.itm_26)
         : chalk.dim('not found');
       logger.log(`  ITM 26:   ${itm26}`);
+      const allBuiltRelPrep = deadlines.all_built_rel_prep
+        ? chalk.bold(deadlines.all_built_rel_prep)
+        : chalk.dim('not found');
+      logger.log(`  All built REL_PREP: ${allBuiltRelPrep}`);
     } catch (error) {
       logger.log(chalk.yellow(`  Failed to sync ${release}: ${error}`));
     }
