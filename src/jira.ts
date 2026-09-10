@@ -111,9 +111,18 @@ export class Jira {
     return response.values;
   }
 
-  async getActiveSprint(boardId: number): Promise<Sprint | undefined> {
+  async getActiveSprint(
+    boardId: number,
+    prefix?: string
+  ): Promise<Sprint | undefined> {
     const sprints = await this.getSprints(boardId);
-    return sprints.find(s => s.state === 'active');
+    const activeSprints = sprints.filter(s => s.state === 'active');
+
+    if (prefix) {
+      return activeSprints.find(s => s.name?.startsWith(prefix));
+    }
+
+    return activeSprints[0];
   }
 
   async getIssuesInSprint(

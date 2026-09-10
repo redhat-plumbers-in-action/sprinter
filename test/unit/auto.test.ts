@@ -1159,5 +1159,67 @@ describe('runAuto()', () => {
         expect.stringContaining('"AssignedTeam[Dropdown]" = "team-bar"')
       );
     });
+
+    test('passes prefix to getActiveSprint when provided', async () => {
+      mocks.getActiveSprint.mockResolvedValue({
+        id: 77,
+        state: 'active',
+        name: 'Team Alpha Sprint CY26_16',
+      });
+      mocks.getBoardIssues
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { key: 'RHEL-11000', fields: { status: { name: 'In Progress' } } },
+        ]);
+
+      await runAuto({ ...defaultOptions, prefix: 'Team Alpha Sprint' });
+
+      expect(mocks.getActiveSprint).toHaveBeenCalledWith(
+        123,
+        'Team Alpha Sprint'
+      );
+      expect(mocks.addToSprint).toHaveBeenCalledTimes(1);
+      expect(mocks.addToSprint).toHaveBeenCalledWith('RHEL-11000', 77);
+    });
+
+    test('calls getActiveSprint without prefix when prefix is not set', async () => {
+      mocks.getActiveSprint.mockResolvedValue({
+        id: 42,
+        state: 'active',
+        name: 'Sprint 10',
+      });
+      mocks.getBoardIssues
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { key: 'RHEL-11100', fields: { status: { name: 'In Progress' } } },
+        ]);
+
+      await runAuto(defaultOptions);
+
+      expect(mocks.getActiveSprint).toHaveBeenCalledWith(123, undefined);
+      expect(mocks.addToSprint).toHaveBeenCalledWith('RHEL-11100', 42);
+    });
+
+    test('uses the sprint returned by getActiveSprint when prefix matches', async () => {
+      mocks.getActiveSprint.mockResolvedValue({
+        id: 88,
+        state: 'active',
+        name: 'Team Beta Sprint CY26_16',
+      });
+      mocks.getBoardIssues.mockResolvedValueOnce([]).mockResolvedValueOnce([
+        { key: 'RHEL-11200', fields: { status: { name: 'In Progress' } } },
+        { key: 'RHEL-11201', fields: { status: { name: 'In Progress' } } },
+      ]);
+
+      await runAuto({ ...defaultOptions, prefix: 'Team Beta Sprint' });
+
+      expect(mocks.getActiveSprint).toHaveBeenCalledWith(
+        123,
+        'Team Beta Sprint'
+      );
+      expect(mocks.addToSprint).toHaveBeenCalledTimes(2);
+      expect(mocks.addToSprint).toHaveBeenCalledWith('RHEL-11200', 88);
+      expect(mocks.addToSprint).toHaveBeenCalledWith('RHEL-11201', 88);
+    });
   });
 });

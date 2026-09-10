@@ -88,6 +88,7 @@ The `auto` command automates the management of split tasks based on ticket state
 - **Preliminary Testing Failed**: When testing has failed, automatically closes the linked Preliminary Testing split task.
 - **Integration without QE Task**: Finds issues in "Integration" status that lack an open QE Task and creates one automatically.
 - **Release Pending with QE Task**: When an issue moves to "Release Pending" status, automatically closes the linked QE Task if it is still open.
+- **Sprint Assignment**: Assigns in-progress tasks without a sprint to the active sprint. When multiple active sprints exist, the `-p` / `--prefix` option selects the sprint whose name starts with the given prefix (e.g. `--prefix "Team Foo Sprint"` matches `Team Foo Sprint CY26_16`). If no prefix is set, the first active sprint is used. If a prefix is set but no active sprint matches, sprint assignment is skipped entirely.
 
 ```md
 $ jira-sprinter auto --help
@@ -97,9 +98,12 @@ Automatically manages split tasks (Preliminary Testing and QE) based on ticket
 state and status
 
 Options:
-  -b, --board [board]            Jira Board ID
-  -t, --team [assigned team]     Jira Assigned Team
-  -c, --components [components]  Jira Components
+  -b, --board <board>            Jira Board ID
+  -t, --team <assigned team>     Jira Assigned Team
+  -c, --components <components>  Jira Components
+  --deadlines-file <path>        Path to deadlines JSON file
+  -p, --prefix <prefix>          Sprint name prefix for matching the active
+                                 sprint
   -h, --help                     display help for command
 ```
 

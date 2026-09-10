@@ -30,6 +30,7 @@ export function getDefaultValue(
     | 'DRY'
     | 'YOLO'
     | 'DEADLINES_FILE'
+    | 'SPRINT_PREFIX'
 ) {
   if (isDefaultValuesDisabled()) {
     return undefined;

@@ -85,7 +85,10 @@ export async function runAuto(options: OptionValues): Promise<void> {
       )
   );
 
-  const activeSprint = await jira.getActiveSprint(+options.board);
+  const activeSprint = await jira.getActiveSprint(
+    +options.board,
+    options.prefix
+  );
   let tasksWithoutSprint: { key?: string; fields?: Record<string, any> }[] = [];
 
   if (!activeSprint) {
