@@ -275,6 +275,64 @@ describe('Jira functions', () => {
 
       expect(result).toBeUndefined();
     });
+
+    test('returns the sprint matching the prefix when multiple active sprints exist', async () => {
+      mocks.getAllSprints.mockResolvedValue({
+        values: [
+          { id: 1, name: 'Team Alpha Sprint CY26_16', state: 'active' },
+          { id: 2, name: 'Team Beta Sprint CY26_16', state: 'active' },
+          { id: 3, name: 'Sprint 3', state: 'future' },
+        ],
+      });
+
+      const result = await jira.getActiveSprint(100, 'Team Beta Sprint');
+
+      expect(result).toEqual({
+        id: 2,
+        name: 'Team Beta Sprint CY26_16',
+        state: 'active',
+      });
+    });
+
+    test('returns undefined when prefix does not match any active sprint', async () => {
+      mocks.getAllSprints.mockResolvedValue({
+        values: [
+          { id: 1, name: 'Team Alpha Sprint CY26_16', state: 'active' },
+          { id: 2, name: 'Team Beta Sprint CY26_16', state: 'active' },
+        ],
+      });
+
+      const result = await jira.getActiveSprint(100, 'Team Gamma Sprint');
+
+      expect(result).toBeUndefined();
+    });
+
+    test('returns first active sprint when no prefix is provided', async () => {
+      mocks.getAllSprints.mockResolvedValue({
+        values: [
+          { id: 1, name: 'Team Alpha Sprint CY26_16', state: 'active' },
+          { id: 2, name: 'Team Beta Sprint CY26_16', state: 'active' },
+        ],
+      });
+
+      const result = await jira.getActiveSprint(100);
+
+      expect(result).toEqual({
+        id: 1,
+        name: 'Team Alpha Sprint CY26_16',
+        state: 'active',
+      });
+    });
+
+    test('returns undefined when prefix is provided but no sprints exist', async () => {
+      mocks.getAllSprints.mockResolvedValue({
+        values: [{ id: 1, name: 'Sprint 1', state: 'future' }],
+      });
+
+      const result = await jira.getActiveSprint(100, 'Team Alpha Sprint');
+
+      expect(result).toBeUndefined();
+    });
   });
 
   describe('addToSprint()', () => {

@@ -96,10 +96,12 @@ describe('CLI functions', () => {
       state and status
 
       Options:
-        -b, --board [board]            Jira Board ID
-        -t, --team [assigned team]     Jira Assigned Team
-        -c, --components [components]  Jira Components
-        --deadlines-file [path]        Path to deadlines JSON file
+        -b, --board <board>            Jira Board ID
+        -t, --team <assigned team>     Jira Assigned Team
+        -c, --components <components>  Jira Components
+        --deadlines-file <path>        Path to deadlines JSON file
+        -p, --prefix <prefix>          Sprint name prefix for matching the active
+                                       sprint
         -h, --help                     display help for command
       "
     `);

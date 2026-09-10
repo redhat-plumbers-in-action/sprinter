@@ -34,21 +34,26 @@ export function cli(): Command {
       .description(
         'Automatically manages split tasks (Preliminary Testing and QE) based on ticket state and status'
       )
-      .option('-b, --board [board]', 'Jira Board ID', getDefaultValue('BOARD'))
+      .option('-b, --board <board>', 'Jira Board ID', getDefaultValue('BOARD'))
       .requiredOption(
-        '-t, --team [assigned team]',
+        '-t, --team <assigned team>',
         'Jira Assigned Team',
         getDefaultValue('TEAM')
       )
       .option(
-        '-c, --components [components]',
+        '-c, --components <components>',
         'Jira Components',
         getDefaultValue('COMPONENTS')
       )
       .option(
-        '--deadlines-file [path]',
+        '--deadlines-file <path>',
         'Path to deadlines JSON file',
         getDefaultValue('DEADLINES_FILE')
+      )
+      .option(
+        '-p, --prefix <prefix>',
+        'Sprint name prefix for matching the active sprint',
+        getDefaultValue('SPRINT_PREFIX')
       )
       .action(async (_opts, command) => {
         await runAuto(command.optsWithGlobals());
